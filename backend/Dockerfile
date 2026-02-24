@@ -1,29 +1,33 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libpango1.0-dev \
     libcairo2-dev \
     libgdk-pixbuf-2.0-dev \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libffi-dev
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-editable
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable
 
 COPY app/ app/
 
 FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangocairo-1.0-0 \
     libcairo2 \
     libgdk-pixbuf-2.0-0 \
-    libffi8 \
-    && rm -rf /var/lib/apt/lists/*
+    libffi8
 
 RUN groupadd -r app && useradd -r -g app -d /app app
 
