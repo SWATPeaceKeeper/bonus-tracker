@@ -23,6 +23,11 @@ data/*.db-journal
 *.swp
 *.swo
 
+# Data files
+*.xlsx
+*.xls
+*.csv
+
 # OS
 .DS_Store
 Thumbs.db
