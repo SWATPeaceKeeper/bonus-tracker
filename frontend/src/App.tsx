@@ -8,6 +8,7 @@ const Projects = lazy(() => import("@/pages/Projects"));
 const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
 const Import = lazy(() => import("@/pages/Import"));
 const FinanceReport = lazy(() => import("@/pages/FinanceReport"));
+const BonusOverview = lazy(() => import("@/pages/BonusOverview"));
 const CustomerReport = lazy(() => import("@/pages/CustomerReport"));
 
 function PageLoader() {
@@ -33,6 +34,7 @@ export default function App() {
             />
             <Route path="import" element={<Import />} />
             <Route path="finance" element={<FinanceReport />} />
+            <Route path="bonus" element={<BonusOverview />} />
           </Route>
         </Routes>
       </Suspense>

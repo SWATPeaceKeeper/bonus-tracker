@@ -5,6 +5,7 @@ import {
   FolderKanban,
   Upload,
   FileBarChart,
+  Coins,
   Menu,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { to: "/projects", label: "Projekte", icon: <FolderKanban className="h-5 w-5" /> },
   { to: "/import", label: "Import", icon: <Upload className="h-5 w-5" /> },
   { to: "/finance", label: "Finanzbericht", icon: <FileBarChart className="h-5 w-5" /> },
+  { to: "/bonus", label: "Bonus", icon: <Coins className="h-5 w-5" /> },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
