@@ -25,14 +25,8 @@ import {
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get, getDownloadUrl } from "@/api/client";
-import { formatCurrency, formatNumber, getMonthName } from "@/lib/utils";
+import { formatCurrency, formatNumber, getMonthName, CURRENT_YEAR, YEARS, ALL_MONTHS } from "@/lib/utils";
 import type { FinanceMonth, MonthlyProjectReport } from "@/types";
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) =>
-  String(CURRENT_YEAR - i),
-);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 interface ProjectRow {
   project_id: string;
@@ -131,7 +125,7 @@ export default function FinanceReport() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Ganzes Jahr</SelectItem>
-              {MONTHS.map((m) => (
+              {ALL_MONTHS.map((m) => (
                 <SelectItem key={m} value={String(m)}>
                   {getMonthName(m)}
                 </SelectItem>
@@ -172,7 +166,7 @@ export default function FinanceReport() {
                     <TableHead className="sticky left-0 bg-card">
                       Projekt
                     </TableHead>
-                    {MONTHS.map((m) => (
+                    {ALL_MONTHS.map((m) => (
                       <TableHead
                         key={m}
                         className="text-right min-w-[100px]"
@@ -194,7 +188,7 @@ export default function FinanceReport() {
                           {proj.client}
                         </div>
                       </TableCell>
-                      {MONTHS.map((m) => {
+                      {ALL_MONTHS.map((m) => {
                         const md = proj.months[m];
                         return (
                           <TableCell key={m} className="text-right">
@@ -231,7 +225,7 @@ export default function FinanceReport() {
                     <TableCell className="sticky left-0 bg-card">
                       Gesamt
                     </TableCell>
-                    {MONTHS.map((m) => {
+                    {ALL_MONTHS.map((m) => {
                       const mt = monthlyTotals[m];
                       return (
                         <TableCell key={m} className="text-right">

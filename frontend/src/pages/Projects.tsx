@@ -23,25 +23,8 @@ import DataTable, { type Column } from "@/components/DataTable";
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get, post, put, del } from "@/api/client";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatNumber, STATUS_LABELS, STATUS_VARIANTS, type ProjectStatus } from "@/lib/utils";
 import type { Project, ProjectCreate } from "@/types";
-
-type ProjectStatus = Project["status"];
-
-const STATUS_LABELS: Record<ProjectStatus, string> = {
-  aktiv: "Aktiv",
-  pausiert: "Pausiert",
-  abgeschlossen: "Abgeschlossen",
-};
-
-const STATUS_VARIANTS: Record<
-  ProjectStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  aktiv: "default",
-  pausiert: "outline",
-  abgeschlossen: "secondary",
-};
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
@@ -124,16 +107,16 @@ export default function Projects() {
   }
 
   async function handleDelete(project: Project) {
-    if (!confirm(`Projekt "${project.name}" wirklich loeschen?`)) {
+    if (!confirm(`Projekt "${project.name}" wirklich löschen?`)) {
       return;
     }
     try {
       await del(`/projects/${project.id}`);
-      toast.success("Projekt geloescht");
+      toast.success("Projekt gelöscht");
       refetch();
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Fehler beim Loeschen";
+        err instanceof Error ? err.message : "Fehler beim Löschen";
       toast.error(msg);
     }
   }

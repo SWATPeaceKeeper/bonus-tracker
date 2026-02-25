@@ -28,14 +28,8 @@ import {
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get } from "@/api/client";
-import { formatCurrency, formatNumber, getMonthName } from "@/lib/utils";
+import { formatCurrency, formatNumber, getMonthName, STATUS_LABELS } from "@/lib/utils";
 import type { ProjectReport } from "@/types";
-
-const STATUS_LABELS: Record<string, string> = {
-  aktiv: "Aktiv",
-  pausiert: "Pausiert",
-  abgeschlossen: "Abgeschlossen",
-};
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -76,7 +70,7 @@ export default function ProjectDetail() {
             className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Zurueck
+            Zurück
           </Link>
           <h1 className="text-2xl font-bold">{project.name}</h1>
           <p className="text-muted-foreground">{project.client}</p>

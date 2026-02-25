@@ -18,13 +18,8 @@ import DataTable, { type Column } from "@/components/DataTable";
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get } from "@/api/client";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatNumber, CURRENT_YEAR, YEARS, STATUS_LABELS } from "@/lib/utils";
 import type { RevenueData, RevenueProject } from "@/types";
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) =>
-  String(CURRENT_YEAR - i),
-);
 
 const columns: Column<RevenueProject>[] = [
   {
@@ -82,7 +77,7 @@ const columns: Column<RevenueProject>[] = [
     header: "Status",
     render: (r) => (
       <Badge variant="default">
-        {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+        {STATUS_LABELS[r.status as keyof typeof STATUS_LABELS] ?? r.status}
       </Badge>
     ),
     sortValue: (r) => r.status,

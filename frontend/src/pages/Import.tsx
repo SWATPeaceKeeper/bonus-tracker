@@ -30,7 +30,7 @@ const historyColumns: Column<ImportBatch>[] = [
   },
   {
     key: "row_count",
-    header: "Eintraege",
+    header: "Einträge",
     render: (r) => r.row_count,
     sortValue: (r) => r.row_count,
     className: "text-right",
@@ -89,7 +89,7 @@ export default function Import() {
     if (f && f.name.endsWith(".csv")) {
       handleFile(f);
     } else {
-      toast.error("Bitte eine CSV-Datei auswaehlen");
+      toast.error("Bitte eine CSV-Datei auswählen");
     }
   }, []);
 
@@ -120,7 +120,7 @@ export default function Import() {
       setResult(res);
       setFile(null);
       setPreview([]);
-      toast.success(`${res.rows_imported} Eintraege importiert`);
+      toast.success(`${res.rows_imported} Einträge importiert`);
       refetch();
     } catch (err: unknown) {
       const msg =
@@ -156,7 +156,7 @@ export default function Import() {
                 Clockify CSV-Datei hierher ziehen
               </p>
               <p className="text-sm text-muted-foreground">
-                oder Datei auswaehlen
+                oder Datei auswählen
               </p>
             </div>
             <label>
@@ -169,7 +169,7 @@ export default function Import() {
               <Button variant="outline" asChild>
                 <span>
                   <FileUp className="mr-2 h-4 w-4" />
-                  Datei auswaehlen
+                  Datei auswählen
                 </span>
               </Button>
             </label>
@@ -192,7 +192,7 @@ export default function Import() {
             <div className="mt-4 flex items-center gap-2 rounded-md bg-green-50 p-3 text-green-800 dark:bg-green-950 dark:text-green-200">
               <CheckCircle className="h-5 w-5" />
               <span>
-                {result.rows_imported} Eintraege importiert
+                {result.rows_imported} Einträge importiert
                 {result.projects_created > 0 &&
                   `, ${result.projects_created} neue Projekte`}
                 {result.projects_updated > 0 &&

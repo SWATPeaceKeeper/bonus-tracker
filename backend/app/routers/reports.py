@@ -21,6 +21,7 @@ from app.schemas import (
     RevenueResponse,
 )
 from app.services.bonus_calculator import calculate_bonus
+from app.services.hours_service import get_hours_by_month, get_hours_by_project
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -39,37 +40,20 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     )
     hours_this_month = float(hours_result.scalar_one())
 
-    # Build per-project stats for active projects
+    # Build per-project stats for active projects (single batch query)
     projects_result = await db.execute(
         select(Project).where(Project.status == "aktiv").order_by(Project.name)
     )
-    projects = projects_result.scalars().all()
+    projects = list(projects_result.scalars().all())
+
+    hours_map = await get_hours_by_project(
+        db, [p.id for p in projects], TimeEntry.month == current_month
+    )
 
     project_stats = []
     total_bonus = 0.0
     for p in projects:
-        remote_result = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == p.id,
-                    TimeEntry.month == current_month,
-                    TimeEntry.is_onsite == False,  # noqa: E712
-                )
-            )
-        )
-        remote_h = float(remote_result.scalar_one())
-
-        onsite_result = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == p.id,
-                    TimeEntry.month == current_month,
-                    TimeEntry.is_onsite == True,  # noqa: E712
-                )
-            )
-        )
-        onsite_h = float(onsite_result.scalar_one())
-
+        remote_h, onsite_h = hours_map.get(p.id, (0.0, 0.0))
         h = remote_h + onsite_h
         bonus = calculate_bonus(
             remote_hours=remote_h,
@@ -150,38 +134,24 @@ async def _finance_for_month(db: AsyncSession, month: str):
         select(TimeEntry.project_id).where(TimeEntry.month == month).distinct()
     )
     project_db_ids = [row[0] for row in pid_rows.all()]
+    if not project_db_ids:
+        return [], 0.0, 0.0
+
+    # Batch-load projects and hours
+    proj_result = await db.execute(select(Project).where(Project.id.in_(project_db_ids)))
+    projects_by_id = {p.id: p for p in proj_result.scalars().all()}
+    hours_map = await get_hours_by_project(db, project_db_ids, TimeEntry.month == month)
 
     project_reports = []
     total_hours = 0.0
     total_bonus = 0.0
 
-    for project_db_id in project_db_ids:
-        project = await db.get(Project, project_db_id)
+    for pid in project_db_ids:
+        project = projects_by_id.get(pid)
         if not project:
             continue
 
-        remote_result = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == project_db_id,
-                    TimeEntry.month == month,
-                    TimeEntry.is_onsite == False,  # noqa: E712
-                )
-            )
-        )
-        remote_h = float(remote_result.scalar_one())
-
-        onsite_result = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == project_db_id,
-                    TimeEntry.month == month,
-                    TimeEntry.is_onsite == True,  # noqa: E712
-                )
-            )
-        )
-        onsite_h = float(onsite_result.scalar_one())
-
+        remote_h, onsite_h = hours_map.get(pid, (0.0, 0.0))
         h = remote_h + onsite_h
         bonus = calculate_bonus(
             remote_hours=remote_h,
@@ -218,39 +188,12 @@ async def get_project_report(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Monthly breakdown — query remote and onsite hours per month
-    months_result = await db.execute(
-        select(TimeEntry.month)
-        .where(TimeEntry.project_id == project_id)
-        .distinct()
-        .order_by(TimeEntry.month)
-    )
-    month_keys = [row[0] for row in months_result.all()]
+    # Monthly breakdown — single query grouped by month + is_onsite
+    month_hours = await get_hours_by_month(db, project_id)
 
     monthly = []
-    for m in month_keys:
-        remote_res = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == project_id,
-                    TimeEntry.month == m,
-                    TimeEntry.is_onsite == False,  # noqa: E712
-                )
-            )
-        )
-        remote_h = float(remote_res.scalar_one())
-
-        onsite_res = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == project_id,
-                    TimeEntry.month == m,
-                    TimeEntry.is_onsite == True,  # noqa: E712
-                )
-            )
-        )
-        onsite_h = float(onsite_res.scalar_one())
-
+    for m in sorted(month_hours.keys()):
+        remote_h, onsite_h = month_hours[m]
         h = remote_h + onsite_h
         bonus = calculate_bonus(
             remote_hours=remote_h,
@@ -432,7 +375,11 @@ async def get_revenue(
     result = await db.execute(
         select(Project).where(Project.status == "aktiv").order_by(Project.name)
     )
-    projects = result.scalars().all()
+    projects = list(result.scalars().all())
+
+    hours_map = await get_hours_by_project(
+        db, [p.id for p in projects], TimeEntry.month.startswith(year_prefix)
+    )
 
     total_deal = 0.0
     total_rev = 0.0
@@ -440,24 +387,7 @@ async def get_revenue(
     project_data: list[RevenueProjectData] = []
 
     for p in projects:
-        remote_r = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                TimeEntry.project_id == p.id,
-                TimeEntry.month.startswith(year_prefix),
-                TimeEntry.is_onsite == False,  # noqa: E712
-            )
-        )
-        remote_h = float(remote_r.scalar_one())
-
-        onsite_r = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                TimeEntry.project_id == p.id,
-                TimeEntry.month.startswith(year_prefix),
-                TimeEntry.is_onsite == True,  # noqa: E712
-            )
-        )
-        onsite_h = float(onsite_r.scalar_one())
-
+        remote_h, onsite_h = hours_map.get(p.id, (0.0, 0.0))
         rate = p.hourly_rate or 0.0
         onsite_rate = p.onsite_hourly_rate or rate
         revenue = remote_h * rate + onsite_h * onsite_rate

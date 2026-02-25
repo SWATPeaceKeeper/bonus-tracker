@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import CustomerReportNote, Project, TimeEntry
 from app.services.bonus_calculator import calculate_bonus
+from app.services.hours_service import get_hours_by_project
 from app.services.pdf_generator import (
     generate_customer_pdf,
     generate_finance_csv,
@@ -146,35 +147,21 @@ async def _build_finance_data(db: AsyncSession, year: int, month: int | None = N
     # Get distinct projects with time entries in this period
     pid_result = await db.execute(select(TimeEntry.project_id).where(month_condition).distinct())
     project_db_ids = [row[0] for row in pid_result.all()]
+    if not project_db_ids:
+        return []
+
+    # Batch-load projects and hours
+    proj_result = await db.execute(select(Project).where(Project.id.in_(project_db_ids)))
+    projects_by_id = {p.id: p for p in proj_result.scalars().all()}
+    hours_map = await get_hours_by_project(db, project_db_ids, month_condition)
 
     projects_data = []
-    for project_db_id in project_db_ids:
-        project = await db.get(Project, project_db_id)
+    for pid in project_db_ids:
+        project = projects_by_id.get(pid)
         if not project:
             continue
 
-        remote_result = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == project_db_id,
-                    month_condition,
-                    TimeEntry.is_onsite == False,  # noqa: E712
-                )
-            )
-        )
-        remote_h = float(remote_result.scalar_one())
-
-        onsite_result = await db.execute(
-            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-                and_(
-                    TimeEntry.project_id == project_db_id,
-                    month_condition,
-                    TimeEntry.is_onsite == True,  # noqa: E712
-                )
-            )
-        )
-        onsite_h = float(onsite_result.scalar_one())
-
+        remote_h, onsite_h = hours_map.get(pid, (0.0, 0.0))
         h = round(remote_h + onsite_h, 2)
         bonus = calculate_bonus(
             remote_hours=remote_h,
