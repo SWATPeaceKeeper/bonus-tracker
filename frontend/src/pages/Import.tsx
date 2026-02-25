@@ -15,6 +15,8 @@ import { get, uploadFile } from "@/api/client";
 import { formatDate, cn } from "@/lib/utils";
 import type { ImportBatch, ImportResult } from "@/types";
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
 const historyColumns: Column<ImportBatch>[] = [
   {
     key: "filename",
@@ -52,6 +54,10 @@ export default function Import() {
   const [preview, setPreview] = useState<string[][]>([]);
 
   function handleFile(f: File) {
+    if (f.size > MAX_FILE_SIZE) {
+      toast.error("Datei zu groß (max. 50 MB)");
+      return;
+    }
     setFile(f);
     setResult(null);
 
@@ -87,6 +93,10 @@ export default function Import() {
     setDragOver(false);
     const f = e.dataTransfer.files[0];
     if (f && f.name.endsWith(".csv")) {
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error("Datei zu groß (max. 50 MB)");
+        return;
+      }
       handleFile(f);
     } else {
       toast.error("Bitte eine CSV-Datei auswählen");

@@ -1,4 +1,10 @@
-import { lazy, Suspense } from "react";
+import {
+  Component,
+  lazy,
+  Suspense,
+  type ReactNode,
+  type ErrorInfo,
+} from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import Layout from "@/components/Layout";
@@ -12,6 +18,45 @@ const BonusOverview = lazy(() => import("@/pages/BonusOverview"));
 const CustomerReport = lazy(() => import("@/pages/CustomerReport"));
 const Revenue = lazy(() => import("@/pages/Revenue"));
 
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("Unhandled error:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen gap-4">
+          <h1 className="text-xl font-bold">Etwas ist schiefgelaufen</h1>
+          <button
+            className="px-4 py-2 rounded bg-primary text-primary-foreground"
+            onClick={() => {
+              this.setState({ hasError: false });
+              window.location.href = "/";
+            }}
+          >
+            Zur Startseite
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function PageLoader() {
   return (
     <div className="flex items-center justify-center h-64">
@@ -22,25 +67,27 @@ function PageLoader() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="projects" element={<Projects />} />
-            <Route path="projects/:id" element={<ProjectDetail />} />
-            <Route
-              path="projects/:id/customer-report"
-              element={<CustomerReport />}
-            />
-            <Route path="import" element={<Import />} />
-            <Route path="finance" element={<FinanceReport />} />
-            <Route path="bonus" element={<BonusOverview />} />
-            <Route path="revenue" element={<Revenue />} />
-          </Route>
-        </Routes>
-      </Suspense>
-      <Toaster />
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="projects/:id" element={<ProjectDetail />} />
+              <Route
+                path="projects/:id/customer-report"
+                element={<CustomerReport />}
+              />
+              <Route path="import" element={<Import />} />
+              <Route path="finance" element={<FinanceReport />} />
+              <Route path="bonus" element={<BonusOverview />} />
+              <Route path="revenue" element={<Revenue />} />
+            </Route>
+          </Routes>
+        </Suspense>
+        <Toaster />
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

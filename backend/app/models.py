@@ -12,10 +12,12 @@ from sqlalchemy import (
     String,
     Text,
     Time,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.config import STATUS_ACTIVE
 from app.database import Base
 
 
@@ -32,7 +34,7 @@ class Project(Base):
     budget_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
     hourly_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     bonus_rate: Mapped[float] = mapped_column(Float, default=0.02)
-    status: Mapped[str] = mapped_column(String(20), default="aktiv")
+    status: Mapped[str] = mapped_column(String(20), default=STATUS_ACTIVE)
     onsite_hourly_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     project_manager: Mapped[str | None] = mapped_column(String(255), nullable=True)
     customer_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -90,6 +92,7 @@ class CustomerReportNote(Base):
     """Stores per-project, per-month notes for customer reports."""
 
     __tablename__ = "customer_report_notes"
+    __table_args__ = (UniqueConstraint("project_id", "month"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id"), index=True)

@@ -1,5 +1,7 @@
 """CSV import endpoints."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import ImportBatch, Project, TimeEntry
 from app.schemas import ImportBatchRead, ImportResult
-from app.services.csv_parser import parse_csv
+from app.services.csv_parser import ParsedProject, parse_csv
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
@@ -25,7 +27,12 @@ async def upload_csv(
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="File must be a CSV")
 
-    content = (await file.read()).decode("utf-8-sig")
+    try:
+        content = (await file.read()).decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=400, detail="File must be valid UTF-8 encoded"
+        ) from None
     result = parse_csv(content)
 
     if not result.entries:
@@ -89,7 +96,7 @@ async def list_imports(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
-async def _ensure_projects(projects, db: AsyncSession) -> int:
+async def _ensure_projects(projects: list[ParsedProject], db: AsyncSession) -> int:
     """Create projects that don't exist yet. Return count of newly created."""
     created = 0
     for p in projects:
@@ -118,7 +125,7 @@ async def _is_duplicate(
     db: AsyncSession,
     project_id: int,
     employee: str,
-    entry_date,
+    entry_date: datetime,
     duration: float,
 ) -> bool:
     """Check if a matching time entry already exists."""

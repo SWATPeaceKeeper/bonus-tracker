@@ -2,7 +2,9 @@
 
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.config import STATUS_ACTIVE
 
 # -- Project schemas --
 
@@ -17,11 +19,25 @@ class ProjectBase(BaseModel):
     budget_hours: float | None = None
     hourly_rate: float | None = None
     bonus_rate: float = 0.02
-    status: str = "aktiv"
+    status: str = STATUS_ACTIVE
     start_date: date | None = None
     onsite_hourly_rate: float | None = None
     project_manager: str | None = None
     customer_contact: str | None = None
+
+    @field_validator("deal_value", "budget_hours", "hourly_rate", "onsite_hourly_rate")
+    @classmethod
+    def validate_non_negative(cls, v: float | None) -> float | None:
+        if v is not None and v < 0:
+            raise ValueError("must be non-negative")
+        return v
+
+    @field_validator("bonus_rate")
+    @classmethod
+    def validate_bonus_rate(cls, v: float) -> float:
+        if v < 0 or v > 1:
+            raise ValueError("must be between 0 and 1")
+        return v
 
 
 class ProjectCreate(ProjectBase):
@@ -44,6 +60,20 @@ class ProjectUpdate(BaseModel):
     onsite_hourly_rate: float | None = None
     project_manager: str | None = None
     customer_contact: str | None = None
+
+    @field_validator("deal_value", "budget_hours", "hourly_rate", "onsite_hourly_rate")
+    @classmethod
+    def validate_non_negative(cls, v: float | None) -> float | None:
+        if v is not None and v < 0:
+            raise ValueError("must be non-negative")
+        return v
+
+    @field_validator("bonus_rate")
+    @classmethod
+    def validate_bonus_rate(cls, v: float | None) -> float | None:
+        if v is not None and (v < 0 or v > 1):
+            raise ValueError("must be between 0 and 1")
+        return v
 
 
 class ProjectRead(ProjectBase):

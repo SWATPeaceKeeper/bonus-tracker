@@ -1,6 +1,7 @@
 """PDF and CSV export endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -107,12 +108,12 @@ async def export_customer_pdf(
 async def export_finance(
     year: int = Query(default=None),
     month: int | None = Query(default=None),
-    export_format: str = Query(default="pdf", alias="format"),
+    export_format: Literal["csv", "pdf"] = Query(default="pdf", alias="format"),
     db: AsyncSession = Depends(get_db),
 ):
     """Export finance report as PDF or CSV."""
     if year is None:
-        year = datetime.now().year
+        year = datetime.now(UTC).year
 
     projects_data = await _build_finance_data(db, year, month)
 
