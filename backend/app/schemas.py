@@ -149,7 +149,10 @@ class MonthlyProjectReport(BaseModel):
     client: str
     month: str
     total_hours: float
+    remote_hours: float = 0.0
+    onsite_hours: float = 0.0
     hourly_rate: float | None
+    onsite_hourly_rate: float | None = None
     bonus_rate: float
     bonus_amount: float
 
@@ -259,6 +262,9 @@ class DashboardStats(BaseModel):
     total_hours_current_month: float = 0.0
     total_bonus_current_month: float = 0.0
     projects: list[ProjectWithHours] = Field(default_factory=list)
+    ytd_hours: float = 0.0
+    ytd_bonus: float = 0.0
+    ytd_revenue: float = 0.0
 
 
 # -- Revenue schemas --

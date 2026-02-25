@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -6,7 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Euro, FolderKanban, Clock } from "lucide-react";
+import { Euro, FolderKanban, Clock, TrendingUp } from "lucide-react";
+import { toast } from "sonner";
 import DataTable, { type Column } from "@/components/DataTable";
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
@@ -49,11 +51,9 @@ const projectColumns: Column<Project>[] = [
         return <span className="text-muted-foreground">-</span>;
       }
       const pct = Math.round((r.total_hours / r.budget_hours) * 100);
-      return (
-        <Badge variant={pct > 90 ? "destructive" : "secondary"}>
-          {pct}%
-        </Badge>
-      );
+      const variant =
+        pct > 90 ? "destructive" : pct > 60 ? "outline" : "secondary";
+      return <Badge variant={variant}>{pct}%</Badge>;
     },
     sortValue: (r) =>
       r.budget_hours ? r.total_hours / r.budget_hours : 0,
@@ -85,6 +85,23 @@ export default function Dashboard() {
   const { data, loading, error, refetch } = useApi<DashboardStats>(
     () => get<DashboardStats>("/reports/dashboard"),
   );
+
+  useEffect(() => {
+    if (!data) return;
+    const warnings = data.projects.filter(
+      (p) =>
+        p.budget_hours != null &&
+        p.budget_hours > 0 &&
+        p.total_hours / p.budget_hours > 0.9,
+    );
+    for (const p of warnings) {
+      const pct = Math.round((p.total_hours / p.budget_hours!) * 100);
+      toast.warning(`${p.name}: ${pct}% Budget verbraucht`, {
+        id: `budget-${p.id}`,
+        duration: 8000,
+      });
+    }
+  }, [data]);
 
   if (loading) return <LoadingState />;
   if (error || !data) {
@@ -137,6 +154,51 @@ export default function Dashboard() {
           <CardContent>
             <p className="text-2xl font-bold">
               {formatNumber(data.total_hours_current_month)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* YTD KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Bonus (YTD)
+            </CardTitle>
+            <Euro className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {formatCurrency(data.ytd_bonus)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Umsatz (YTD)
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {formatCurrency(data.ytd_revenue)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">
+              Stunden (YTD)
+            </CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {formatNumber(data.ytd_hours)}
             </p>
           </CardContent>
         </Card>

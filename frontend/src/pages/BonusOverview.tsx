@@ -211,9 +211,27 @@ export default function BonusOverview() {
                               <div className="text-xs text-muted-foreground">
                                 {proj.client}
                               </div>
+                              <div className="mt-1 text-xs text-muted-foreground font-mono">
+                                {proj.remote_hours > 0 && (
+                                  <span>
+                                    {formatNumber(proj.remote_hours)} Std. × {formatCurrency(proj.hourly_rate ?? 0)} × {(proj.bonus_rate * 100).toFixed(0)}%
+                                    {proj.onsite_hours > 0 && " + "}
+                                  </span>
+                                )}
+                                {proj.onsite_hours > 0 && (
+                                  <span>
+                                    {formatNumber(proj.onsite_hours)} Std. (OnSite) × {formatCurrency(proj.onsite_hourly_rate ?? proj.hourly_rate ?? 0)} × {(proj.bonus_rate * 100).toFixed(0)}%
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right text-sm">
                               {formatNumber(proj.total_hours)} Std.
+                              {(proj.remote_hours > 0 && proj.onsite_hours > 0) && (
+                                <div className="text-xs text-muted-foreground">
+                                  {formatNumber(proj.remote_hours)} Remote + {formatNumber(proj.onsite_hours)} OnSite
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="text-right text-sm">
                               {formatCurrency(proj.bonus_amount)}

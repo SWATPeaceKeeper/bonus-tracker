@@ -83,6 +83,9 @@ export interface DashboardStats {
   total_hours_current_month: number;
   total_bonus_current_month: number;
   projects: Project[];
+  ytd_hours: number;
+  ytd_bonus: number;
+  ytd_revenue: number;
 }
 
 // GET /api/reports/finance?year=YYYY returns FinanceMonth[]
@@ -92,7 +95,10 @@ export interface MonthlyProjectReport {
   client: string;
   month: string;
   total_hours: number;
+  remote_hours: number;
+  onsite_hours: number;
   hourly_rate: number | null;
+  onsite_hourly_rate: number | null;
   bonus_rate: number;
   bonus_amount: number;
 }
