@@ -37,9 +37,7 @@ class Project(Base):
     project_manager: Mapped[str | None] = mapped_column(String(255), nullable=True)
     customer_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )
@@ -59,14 +57,10 @@ class ImportBatch(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     filename: Mapped[str] = mapped_column(String(255))
-    imported_at: Mapped[datetime] = mapped_column(
-        DateTime, server_default=func.now()
-    )
+    imported_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     row_count: Mapped[int] = mapped_column(Integer, default=0)
 
-    time_entries: Mapped[list["TimeEntry"]] = relationship(
-        back_populates="import_batch"
-    )
+    time_entries: Mapped[list["TimeEntry"]] = relationship(back_populates="import_batch")
 
 
 class TimeEntry(Base):
@@ -75,9 +69,7 @@ class TimeEntry(Base):
     __tablename__ = "time_entries"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    project_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("projects.id"), index=True
-    )
+    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id"), index=True)
     date: Mapped[date] = mapped_column(Date)
     duration_decimal: Mapped[float] = mapped_column(Float)
     employee: Mapped[str] = mapped_column(String(255))
@@ -91,9 +83,7 @@ class TimeEntry(Base):
     )
 
     project: Mapped["Project"] = relationship(back_populates="time_entries")
-    import_batch: Mapped["ImportBatch"] = relationship(
-        back_populates="time_entries"
-    )
+    import_batch: Mapped["ImportBatch"] = relationship(back_populates="time_entries")
 
 
 class CustomerReportNote(Base):
@@ -102,9 +92,7 @@ class CustomerReportNote(Base):
     __tablename__ = "customer_report_notes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    project_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("projects.id"), index=True
-    )
+    project_id: Mapped[int] = mapped_column(Integer, ForeignKey("projects.id"), index=True)
     month: Mapped[str] = mapped_column(String(7))
     note: Mapped[str] = mapped_column(Text, default="")
 

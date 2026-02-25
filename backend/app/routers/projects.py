@@ -12,9 +12,7 @@ from app.services.bonus_calculator import calculate_bonus
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-async def _enrich_project(
-    project: Project, db: AsyncSession
-) -> ProjectWithHours:
+async def _enrich_project(project: Project, db: AsyncSession) -> ProjectWithHours:
     """Add computed hours and bonus fields to a project."""
     remote_result = await db.execute(
         select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
@@ -68,9 +66,7 @@ async def create_project(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new project."""
-    existing = await db.execute(
-        select(Project).where(Project.project_id == data.project_id)
-    )
+    existing = await db.execute(select(Project).where(Project.project_id == data.project_id))
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=409,

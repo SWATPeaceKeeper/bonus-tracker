@@ -30,9 +30,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     """Return dashboard KPIs: active projects, current month hours, bonus."""
     current_month = datetime.now().strftime("%Y-%m")
 
-    active_count = await db.scalar(
-        select(func.count(Project.id)).where(Project.status == "aktiv")
-    )
+    active_count = await db.scalar(select(func.count(Project.id)).where(Project.status == "aktiv"))
 
     hours_result = await db.execute(
         select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
@@ -51,9 +49,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     total_bonus = 0.0
     for p in projects:
         remote_result = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == p.id,
                     TimeEntry.month == current_month,
@@ -64,9 +60,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
         remote_h = float(remote_result.scalar_one())
 
         onsite_result = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == p.id,
                     TimeEntry.month == current_month,
@@ -137,9 +131,7 @@ async def get_finance_report(
 
     reports = []
     for month in months:
-        project_reports, total_h, total_b = await _finance_for_month(
-            db, month
-        )
+        project_reports, total_h, total_b = await _finance_for_month(db, month)
         reports.append(
             FinanceReportResponse(
                 month=month,
@@ -155,9 +147,7 @@ async def _finance_for_month(db: AsyncSession, month: str):
     """Build per-project finance data for a single month."""
     # Get distinct projects with time entries in this month
     pid_rows = await db.execute(
-        select(TimeEntry.project_id)
-        .where(TimeEntry.month == month)
-        .distinct()
+        select(TimeEntry.project_id).where(TimeEntry.month == month).distinct()
     )
     project_db_ids = [row[0] for row in pid_rows.all()]
 
@@ -171,9 +161,7 @@ async def _finance_for_month(db: AsyncSession, month: str):
             continue
 
         remote_result = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == project_db_id,
                     TimeEntry.month == month,
@@ -184,9 +172,7 @@ async def _finance_for_month(db: AsyncSession, month: str):
         remote_h = float(remote_result.scalar_one())
 
         onsite_result = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == project_db_id,
                     TimeEntry.month == month,
@@ -244,9 +230,7 @@ async def get_project_report(
     monthly = []
     for m in month_keys:
         remote_res = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == project_id,
                     TimeEntry.month == m,
@@ -257,9 +241,7 @@ async def get_project_report(
         remote_h = float(remote_res.scalar_one())
 
         onsite_res = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == project_id,
                     TimeEntry.month == m,
@@ -277,13 +259,15 @@ async def get_project_report(
             onsite_hourly_rate=project.onsite_hourly_rate,
             bonus_rate=project.bonus_rate,
         )
-        monthly.append({
-            "month": m,
-            "hours": round(h, 2),
-            "remote_hours": round(remote_h, 2),
-            "onsite_hours": round(onsite_h, 2),
-            "bonus": bonus,
-        })
+        monthly.append(
+            {
+                "month": m,
+                "hours": round(h, 2),
+                "remote_hours": round(remote_h, 2),
+                "onsite_hours": round(onsite_h, 2),
+                "bonus": bonus,
+            }
+        )
 
     # Employee breakdown
     emp_query = (
@@ -298,10 +282,7 @@ async def get_project_report(
     if month:
         emp_query = emp_query.where(TimeEntry.month == month)
     emp_rows = await db.execute(emp_query)
-    employees = [
-        {"employee": e, "total_hours": round(float(h), 2)}
-        for e, h in emp_rows.all()
-    ]
+    employees = [{"employee": e, "total_hours": round(float(h), 2)} for e, h in emp_rows.all()]
 
     total_hours = sum(m["hours"] for m in monthly)
     total_bonus = sum(m["bonus"] for m in monthly)
@@ -321,9 +302,7 @@ async def get_project_report(
         "total_hours": round(total_hours, 2),
         "total_bonus": round(total_bonus, 2),
         "budget_remaining": (
-            round(project.budget_hours - total_hours, 2)
-            if project.budget_hours
-            else None
+            round(project.budget_hours - total_hours, 2) if project.budget_hours else None
         ),
         "monthly_breakdown": monthly,
         "employee_breakdown": employees,
@@ -368,10 +347,7 @@ async def get_customer_report(
         )
         .group_by(TimeEntry.employee)
     )
-    employees = [
-        EmployeeHours(employee=e, hours=round(float(h), 2))
-        for e, h in emp_result.all()
-    ]
+    employees = [EmployeeHours(employee=e, hours=round(float(h), 2)) for e, h in emp_result.all()]
 
     # Get note
     note_result = await db.execute(
@@ -400,9 +376,7 @@ async def get_customer_report(
         total_hours=round(total_hours, 2),
         budget_hours=project.budget_hours,
         hours_remaining=(
-            round(project.budget_hours - all_hours, 2)
-            if project.budget_hours
-            else None
+            round(project.budget_hours - all_hours, 2) if project.budget_hours else None
         ),
         employees=employees,
         note=note_obj.note if note_obj else "",
@@ -437,9 +411,7 @@ async def upsert_customer_note(
     if note:
         note.note = data.note
     else:
-        note = CustomerReportNote(
-            project_id=project_id, month=month, note=data.note
-        )
+        note = CustomerReportNote(project_id=project_id, month=month, note=data.note)
         db.add(note)
 
     await db.commit()
@@ -458,9 +430,7 @@ async def get_revenue(
     year_prefix = str(year)
 
     result = await db.execute(
-        select(Project)
-        .where(Project.status == "aktiv")
-        .order_by(Project.name)
+        select(Project).where(Project.status == "aktiv").order_by(Project.name)
     )
     projects = result.scalars().all()
 
@@ -471,11 +441,7 @@ async def get_revenue(
 
     for p in projects:
         remote_r = await db.execute(
-            select(
-                func.coalesce(
-                    func.sum(TimeEntry.duration_decimal), 0.0
-                )
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 TimeEntry.project_id == p.id,
                 TimeEntry.month.startswith(year_prefix),
                 TimeEntry.is_onsite == False,  # noqa: E712
@@ -484,11 +450,7 @@ async def get_revenue(
         remote_h = float(remote_r.scalar_one())
 
         onsite_r = await db.execute(
-            select(
-                func.coalesce(
-                    func.sum(TimeEntry.duration_decimal), 0.0
-                )
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 TimeEntry.project_id == p.id,
                 TimeEntry.month.startswith(year_prefix),
                 TimeEntry.is_onsite == True,  # noqa: E712
@@ -501,11 +463,7 @@ async def get_revenue(
         revenue = remote_h * rate + onsite_h * onsite_rate
         total_h = remote_h + onsite_h
 
-        util = (
-            round(total_h / p.budget_hours, 2)
-            if p.budget_hours
-            else None
-        )
+        util = round(total_h / p.budget_hours, 2) if p.budget_hours else None
         if util is not None:
             utilizations.append(util)
 
@@ -531,11 +489,7 @@ async def get_revenue(
             )
         )
 
-    avg_util = (
-        round(sum(utilizations) / len(utilizations), 2)
-        if utilizations
-        else 0.0
-    )
+    avg_util = round(sum(utilizations) / len(utilizations), 2) if utilizations else 0.0
 
     return RevenueResponse(
         total_deal_value=round(total_deal, 2),

@@ -114,9 +114,7 @@ def _parse_row(
     try:
         duration = float(duration_str)
     except ValueError:
-        errors.append(
-            f"Row {row_num}: invalid duration '{duration_str}'"
-        )
+        errors.append(f"Row {row_num}: invalid duration '{duration_str}'")
         return None
 
     date_str = row.get("Start Date", "").strip()
@@ -128,11 +126,7 @@ def _parse_row(
     project_id = extract_project_id(project_full)
     # Build readable name: everything except the ID suffix
     name_parts = project_full.split(" - ")
-    project_name = (
-        " - ".join(name_parts[:-1]).strip()
-        if len(name_parts) > 1
-        else project_full
-    )
+    project_name = " - ".join(name_parts[:-1]).strip() if len(name_parts) > 1 else project_full
 
     start_t = _parse_time(row.get("Start Time", ""))
     end_t = _parse_time(row.get("End Time", ""))

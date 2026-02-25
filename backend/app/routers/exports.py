@@ -46,10 +46,7 @@ async def export_customer_pdf(
         .group_by(TimeEntry.month)
         .order_by(TimeEntry.month)
     )
-    monthly_data = [
-        {"month": m, "hours": round(float(h), 2)}
-        for m, h in month_rows.all()
-    ]
+    monthly_data = [{"month": m, "hours": round(float(h), 2)} for m, h in month_rows.all()]
 
     # Time entries grouped by month
     entries_result = await db.execute(
@@ -66,12 +63,14 @@ async def export_customer_pdf(
 
     entries_by_month: dict[str, list[dict]] = {}
     for e in entries:
-        entries_by_month.setdefault(e.month, []).append({
-            "date": e.date.strftime("%d.%m.%Y"),
-            "employee": e.employee,
-            "description": e.description,
-            "hours": e.duration_decimal,
-        })
+        entries_by_month.setdefault(e.month, []).append(
+            {
+                "date": e.date.strftime("%d.%m.%Y"),
+                "employee": e.employee,
+                "description": e.description,
+                "hours": e.duration_decimal,
+            }
+        )
 
     # Notes
     notes_result = await db.execute(
@@ -82,9 +81,7 @@ async def export_customer_pdf(
             )
         )
     )
-    notes_by_month = {
-        n.month: n.note for n in notes_result.scalars().all()
-    }
+    notes_by_month = {n.month: n.note for n in notes_result.scalars().all()}
 
     pdf_bytes = generate_customer_pdf(
         project_name=project.name,
@@ -125,11 +122,7 @@ async def export_finance(
         return Response(
             content=csv_content,
             media_type="text/csv",
-            headers={
-                "Content-Disposition": (
-                    f'attachment; filename="Finanzbericht_{suffix}.csv"'
-                )
-            },
+            headers={"Content-Disposition": (f'attachment; filename="Finanzbericht_{suffix}.csv"')},
         )
 
     month_str = f"{year}-{month:02d}" if month else None
@@ -137,17 +130,11 @@ async def export_finance(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": (
-                f'attachment; filename="Finanzbericht_{suffix}.pdf"'
-            )
-        },
+        headers={"Content-Disposition": (f'attachment; filename="Finanzbericht_{suffix}.pdf"')},
     )
 
 
-async def _build_finance_data(
-    db: AsyncSession, year: int, month: int | None = None
-) -> list[dict]:
+async def _build_finance_data(db: AsyncSession, year: int, month: int | None = None) -> list[dict]:
     """Build aggregated project data for finance export."""
     if month:
         month_filter = f"{year}-{month:02d}"
@@ -157,11 +144,7 @@ async def _build_finance_data(
         month_condition = TimeEntry.month.startswith(year_prefix)
 
     # Get distinct projects with time entries in this period
-    pid_result = await db.execute(
-        select(TimeEntry.project_id)
-        .where(month_condition)
-        .distinct()
-    )
+    pid_result = await db.execute(select(TimeEntry.project_id).where(month_condition).distinct())
     project_db_ids = [row[0] for row in pid_result.all()]
 
     projects_data = []
@@ -171,9 +154,7 @@ async def _build_finance_data(
             continue
 
         remote_result = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == project_db_id,
                     month_condition,
@@ -184,9 +165,7 @@ async def _build_finance_data(
         remote_h = float(remote_result.scalar_one())
 
         onsite_result = await db.execute(
-            select(
-                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
-            ).where(
+            select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
                 and_(
                     TimeEntry.project_id == project_db_id,
                     month_condition,
@@ -204,13 +183,15 @@ async def _build_finance_data(
             onsite_hourly_rate=project.onsite_hourly_rate,
             bonus_rate=project.bonus_rate,
         )
-        projects_data.append({
-            "project_name": project.name,
-            "client": project.client,
-            "hourly_rate": project.hourly_rate,
-            "onsite_hourly_rate": project.onsite_hourly_rate,
-            "bonus_rate": project.bonus_rate,
-            "total_hours": h,
-            "total_bonus": bonus,
-        })
+        projects_data.append(
+            {
+                "project_name": project.name,
+                "client": project.client,
+                "hourly_rate": project.hourly_rate,
+                "onsite_hourly_rate": project.onsite_hourly_rate,
+                "bonus_rate": project.bonus_rate,
+                "total_hours": h,
+                "total_bonus": bonus,
+            }
+        )
     return projects_data

@@ -213,11 +213,7 @@ def generate_finance_pdf(
     Returns:
         PDF file content as bytes.
     """
-    title = (
-        f"Finanzübersicht {german_month(month_str)}"
-        if month_str
-        else f"Finanzübersicht {year}"
-    )
+    title = f"Finanzübersicht {german_month(month_str)}" if month_str else f"Finanzübersicht {year}"
 
     rows = ""
     grand_hours = 0.0
@@ -279,18 +275,19 @@ def generate_finance_csv(
     """
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_ALL)
-    writer.writerow(["Projekt", "Kunde", "Stundensatz",
-                     "Bonussatz", "Stunden", "Bonus"])
+    writer.writerow(["Projekt", "Kunde", "Stundensatz", "Bonussatz", "Stunden", "Bonus"])
     for p in projects_data:
         rate = p.get("hourly_rate") or 0
-        writer.writerow([
-            _defuse_formula(p["project_name"]),
-            _defuse_formula(p["client"]),
-            rate,
-            p["bonus_rate"],
-            p["total_hours"],
-            p["total_bonus"],
-        ])
+        writer.writerow(
+            [
+                _defuse_formula(p["project_name"]),
+                _defuse_formula(p["client"]),
+                rate,
+                p["bonus_rate"],
+                p["total_hours"],
+                p["total_bonus"],
+            ]
+        )
     return output.getvalue()
 
 
