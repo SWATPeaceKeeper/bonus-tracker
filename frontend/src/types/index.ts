@@ -61,6 +61,7 @@ export interface TimeEntry {
   start_time: string | null;
   end_time: string | null;
   month: string;
+  is_onsite: boolean;
 }
 
 export interface ImportBatch {
@@ -183,6 +184,20 @@ export interface RevenueData {
   avg_budget_utilization: number;
   active_projects: number;
   projects: RevenueProject[];
+}
+
+// GET /api/reports/employees
+export interface EmployeeProject {
+  project_id: number;
+  project_name: string;
+  hours: number;
+}
+
+export interface EmployeeUtilization {
+  employee: string;
+  total_hours: number;
+  project_count: number;
+  projects: EmployeeProject[];
 }
 
 export interface ApiError {

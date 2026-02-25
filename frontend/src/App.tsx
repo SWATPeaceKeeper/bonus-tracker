@@ -17,6 +17,8 @@ const FinanceReport = lazy(() => import("@/pages/FinanceReport"));
 const BonusOverview = lazy(() => import("@/pages/BonusOverview"));
 const CustomerReport = lazy(() => import("@/pages/CustomerReport"));
 const Revenue = lazy(() => import("@/pages/Revenue"));
+const Employees = lazy(() => import("@/pages/Employees"));
+const TimeEntries = lazy(() => import("@/pages/TimeEntries"));
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -79,10 +81,15 @@ export default function App() {
                 path="projects/:id/customer-report"
                 element={<CustomerReport />}
               />
+              <Route
+                path="projects/:id/time-entries"
+                element={<TimeEntries />}
+              />
               <Route path="import" element={<Import />} />
               <Route path="finance" element={<FinanceReport />} />
               <Route path="bonus" element={<BonusOverview />} />
               <Route path="revenue" element={<Revenue />} />
+              <Route path="employees" element={<Employees />} />
             </Route>
           </Routes>
         </Suspense>
