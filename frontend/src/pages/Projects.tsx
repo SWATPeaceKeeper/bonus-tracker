@@ -55,6 +55,7 @@ export default function Projects() {
     () => get<Project[]>("/projects"),
   );
 
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<ProjectCreate>({ ...EMPTY_FORM });
@@ -134,7 +135,75 @@ export default function Projects() {
     return isNaN(n) ? null : n;
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    if (!data) return;
+    if (selectedIds.size === data.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((p) => p.id)));
+    }
+  }
+
+  async function handleBulkStatus(status: string) {
+    try {
+      await put("/projects/bulk/status", {
+        project_ids: Array.from(selectedIds),
+        status,
+      });
+      toast.success(`${selectedIds.size} Projekte aktualisiert`);
+      setSelectedIds(new Set());
+      refetch();
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Fehler bei Bulk-Aktion";
+      toast.error(msg);
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (!confirm(`${selectedIds.size} Projekte wirklich löschen?`)) return;
+    try {
+      const params = Array.from(selectedIds)
+        .map((id) => `project_ids=${id}`)
+        .join("&");
+      await del(`/projects/bulk?${params}`);
+      toast.success(`${selectedIds.size} Projekte gelöscht`);
+      setSelectedIds(new Set());
+      refetch();
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : "Fehler beim Löschen";
+      toast.error(msg);
+    }
+  }
+
   const columns: Column<Project>[] = [
+    {
+      key: "select",
+      header: "",
+      render: (r) => (
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-gray-300"
+          checked={selectedIds.has(r.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            toggleSelect(r.id);
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      className: "w-10",
+    },
     {
       key: "name",
       header: "Name",
@@ -220,11 +289,66 @@ export default function Projects() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projekte</h1>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Neues Projekt
-        </Button>
+        <div className="flex items-center gap-4">
+          {data && data.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300"
+                checked={
+                  selectedIds.size > 0 &&
+                  selectedIds.size === data.length
+                }
+                onChange={selectAll}
+              />
+              Alle
+            </label>
+          )}
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Neues Projekt
+          </Button>
+        </div>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
+          <span className="text-sm font-medium">
+            {selectedIds.size} ausgewählt
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBulkStatus("aktiv")}
+            >
+              Aktivieren
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBulkStatus("pausiert")}
+            >
+              Pausieren
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBulkStatus("abgeschlossen")}
+            >
+              Abschließen
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Löschen
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
