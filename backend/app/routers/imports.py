@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import ImportBatch, Project, TimeEntry
 from app.schemas import ImportBatchRead, ImportResult
-from app.services.csv_parser import ParsedProject, parse_csv
+from app.services.csv_parser import ParsedProject
+from app.services.data_sources import CsvSource
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 
@@ -33,7 +34,8 @@ async def upload_csv(
         raise HTTPException(
             status_code=400, detail="File must be valid UTF-8 encoded"
         ) from None
-    result = parse_csv(content)
+    source = CsvSource(content)
+    result = await source.fetch()
 
     if not result.entries:
         raise HTTPException(
