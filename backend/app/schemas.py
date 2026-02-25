@@ -19,6 +19,9 @@ class ProjectBase(BaseModel):
     bonus_rate: float = 0.02
     status: str = "aktiv"
     start_date: date | None = None
+    onsite_hourly_rate: float | None = None
+    project_manager: str | None = None
+    customer_contact: str | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -38,6 +41,9 @@ class ProjectUpdate(BaseModel):
     bonus_rate: float | None = None
     status: str | None = None
     start_date: date | None = None
+    onsite_hourly_rate: float | None = None
+    project_manager: str | None = None
+    customer_contact: str | None = None
 
 
 class ProjectRead(ProjectBase):
@@ -55,6 +61,8 @@ class ProjectWithHours(ProjectRead):
 
     total_hours: float = 0.0
     bonus_amount: float = 0.0
+    remote_hours: float = 0.0
+    onsite_hours: float = 0.0
 
 
 # -- TimeEntry schemas --
@@ -72,6 +80,7 @@ class TimeEntryRead(BaseModel):
     start_time: time | None = None
     end_time: time | None = None
     month: str
+    is_onsite: bool = False
 
     model_config = {"from_attributes": True}
 

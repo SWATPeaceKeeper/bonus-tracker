@@ -3,6 +3,7 @@
 from datetime import date, datetime, time
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     Float,
@@ -32,6 +33,9 @@ class Project(Base):
     hourly_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     bonus_rate: Mapped[float] = mapped_column(Float, default=0.02)
     status: Mapped[str] = mapped_column(String(20), default="aktiv")
+    onsite_hourly_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    project_manager: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    customer_contact: Mapped[str | None] = mapped_column(String(255), nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now()
@@ -81,6 +85,7 @@ class TimeEntry(Base):
     start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     month: Mapped[str] = mapped_column(String(7), index=True)
+    is_onsite: Mapped[bool] = mapped_column(Boolean, default=False)
     import_batch_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("import_batches.id"), index=True
     )

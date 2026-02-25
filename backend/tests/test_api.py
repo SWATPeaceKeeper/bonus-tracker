@@ -98,6 +98,26 @@ class TestProjectsCrud:
         resp = await client.get(f"/api/projects/{project['id']}")
         assert resp.status_code == 404
 
+    async def test_create_project_with_new_fields(self, client):
+        resp = await client.post(
+            "/api/projects",
+            json={
+                "name": "OnSite Project",
+                "client": "Client B",
+                "project_id": "OSP-001",
+                "hourly_rate": 120.0,
+                "onsite_hourly_rate": 150.0,
+                "bonus_rate": 0.02,
+                "project_manager": "Max Mustermann",
+                "customer_contact": "Erika Musterfrau",
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["onsite_hourly_rate"] == 150.0
+        assert data["project_manager"] == "Max Mustermann"
+        assert data["customer_contact"] == "Erika Musterfrau"
+
 
 class TestImportEndpoints:
     """Test CSV import endpoints."""
