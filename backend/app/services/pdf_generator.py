@@ -1,7 +1,10 @@
 """PDF generation with WeasyPrint for customer and finance reports."""
 
+import csv
 import io
 import locale
+import re
+from html import escape
 
 GERMAN_MONTHS = {
     "01": "Januar",
@@ -125,7 +128,7 @@ def generate_customer_pdf(
 
         note = notes_by_month.get(month_key, "")
         if note:
-            detail_sections += f"<div class='note'>{note}</div>"
+            detail_sections += f"<div class='note'>{escape(note)}</div>"
 
         detail_sections += (
             "<table><tr><th>Datum</th><th>Mitarbeiter</th>"
@@ -136,8 +139,8 @@ def generate_customer_pdf(
             detail_sections += (
                 f"<tr>"
                 f"<td>{e['date']}</td>"
-                f"<td>{e['employee']}</td>"
-                f"<td>{e.get('description', '')}</td>"
+                f"<td>{escape(e['employee'])}</td>"
+                f"<td>{escape(e.get('description', ''))}</td>"
                 f"<td class='right'>{format_number(e['hours'])}</td>"
                 f"</tr>"
             )
@@ -145,8 +148,8 @@ def generate_customer_pdf(
 
     html = f"""<!DOCTYPE html>
 <html><head><style>{PDF_CSS}</style></head><body>
-<h1>{project_name}</h1>
-<div class='subtitle'>Kunde: {client} | Jahr: {year}</div>
+<h1>{escape(project_name)}</h1>
+<div class='subtitle'>Kunde: {escape(client)} | Jahr: {year}</div>
 
 <h2>Monatliche Stundenübersicht</h2>
 <table>
@@ -182,8 +185,8 @@ def generate_finance_pdf(
     for p in projects_data:
         rows += (
             f"<tr>"
-            f"<td>{p['project_name']}</td>"
-            f"<td>{p['client']}</td>"
+            f"<td>{escape(p['project_name'])}</td>"
+            f"<td>{escape(p['client'])}</td>"
             f"<td class='right'>{format_currency(p.get('hourly_rate'))}</td>"
             f"<td class='right'>{format_number(p['bonus_rate'] * 100)}%</td>"
             f"<td class='right'>{format_number(p['total_hours'])}</td>"
@@ -234,15 +237,33 @@ def generate_finance_csv(
     Returns:
         CSV content as string.
     """
-    lines = ["Projekt,Kunde,Stundensatz,Bonussatz,Stunden,Bonus"]
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_ALL)
+    writer.writerow(["Projekt", "Kunde", "Stundensatz",
+                     "Bonussatz", "Stunden", "Bonus"])
     for p in projects_data:
         rate = p.get("hourly_rate") or 0
-        lines.append(
-            f'"{p["project_name"]}","{p["client"]}",'
-            f"{rate},{p['bonus_rate']},"
-            f"{p['total_hours']},{p['total_bonus']}"
-        )
-    return "\n".join(lines)
+        writer.writerow([
+            _defuse_formula(p["project_name"]),
+            _defuse_formula(p["client"]),
+            rate,
+            p["bonus_rate"],
+            p["total_hours"],
+            p["total_bonus"],
+        ])
+    return output.getvalue()
+
+
+def _defuse_formula(value: str) -> str:
+    """Prefix characters that trigger formula execution in spreadsheets."""
+    if value and value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{value}"
+    return value
+
+
+def safe_filename(name: str) -> str:
+    """Remove characters unsafe for HTTP headers and filenames."""
+    return re.sub(r"[^\w\-.]", "_", name)
 
 
 def _today() -> str:
