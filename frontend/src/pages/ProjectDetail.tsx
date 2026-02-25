@@ -16,7 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { FileText, ArrowLeft } from "lucide-react";
+import { FileText, ArrowLeft, Clock } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -83,6 +83,12 @@ export default function ProjectDetail() {
           >
             {STATUS_LABELS[project.status] ?? project.status}
           </Badge>
+          <Button variant="outline" asChild>
+            <Link to={`/projects/${id}/time-entries`}>
+              <Clock className="mr-2 h-4 w-4" />
+              Zeiteintraege
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link to={`/projects/${id}/customer-report`}>
               <FileText className="mr-2 h-4 w-4" />

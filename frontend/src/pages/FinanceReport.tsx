@@ -197,6 +197,11 @@ export default function FinanceReport() {
                                 <div>
                                   {formatNumber(md.total_hours)} Std.
                                 </div>
+                                {(md.remote_hours > 0 && md.onsite_hours > 0) && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatNumber(md.remote_hours)}R / {formatNumber(md.onsite_hours)}O
+                                  </div>
+                                )}
                                 <div className="text-xs text-muted-foreground">
                                   {formatCurrency(md.bonus_amount)}
                                 </div>

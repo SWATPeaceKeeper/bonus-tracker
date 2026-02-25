@@ -89,11 +89,42 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
             )
         )
 
+    # YTD data
+    current_year = datetime.now(UTC).strftime("%Y")
+    ytd_hours_result = await db.execute(
+        select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
+            TimeEntry.month.startswith(current_year)
+        )
+    )
+    ytd_hours = float(ytd_hours_result.scalar_one())
+
+    # YTD bonus and revenue: reuse projects + hours_map pattern for whole year
+    ytd_hours_map = await get_hours_by_project(
+        db, [p.id for p in projects], TimeEntry.month.startswith(current_year)
+    )
+    ytd_bonus = 0.0
+    ytd_revenue = 0.0
+    for p in projects:
+        remote_h, onsite_h = ytd_hours_map.get(p.id, (0.0, 0.0))
+        rate = p.hourly_rate or 0.0
+        onsite_rate = p.onsite_hourly_rate or rate
+        ytd_bonus += calculate_bonus(
+            remote_hours=remote_h,
+            onsite_hours=onsite_h,
+            hourly_rate=p.hourly_rate,
+            onsite_hourly_rate=p.onsite_hourly_rate,
+            bonus_rate=p.bonus_rate,
+        )
+        ytd_revenue += remote_h * rate + onsite_h * onsite_rate
+
     return DashboardStats(
         active_projects=active_count or 0,
         total_hours_current_month=round(hours_this_month, 2),
         total_bonus_current_month=round(total_bonus, 2),
         projects=project_stats,
+        ytd_hours=round(ytd_hours, 2),
+        ytd_bonus=round(ytd_bonus, 2),
+        ytd_revenue=round(ytd_revenue, 2),
     )
 
 
@@ -173,7 +204,10 @@ async def _finance_for_month(db: AsyncSession, month: str):
                 client=project.client,
                 month=month,
                 total_hours=round(h, 2),
+                remote_hours=round(remote_h, 2),
+                onsite_hours=round(onsite_h, 2),
                 hourly_rate=project.hourly_rate,
+                onsite_hourly_rate=project.onsite_hourly_rate,
                 bonus_rate=project.bonus_rate,
                 bonus_amount=bonus,
             )
@@ -364,6 +398,74 @@ async def upsert_customer_note(
     await db.commit()
     await db.refresh(note)
     return note
+
+
+@router.get("/employees")
+async def get_employee_report(
+    year: int = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return employee utilization data."""
+    if year is None:
+        year = datetime.now(UTC).year
+    year_prefix = str(year)
+
+    # Get all employees with hours in this year
+    result = await db.execute(
+        select(
+            TimeEntry.employee,
+            TimeEntry.project_id,
+            func.sum(TimeEntry.duration_decimal),
+        )
+        .where(TimeEntry.month.startswith(year_prefix))
+        .group_by(TimeEntry.employee, TimeEntry.project_id)
+        .order_by(TimeEntry.employee)
+    )
+    rows = result.all()
+
+    # Get project names
+    project_ids = list({r[1] for r in rows})
+    if project_ids:
+        proj_result = await db.execute(
+            select(Project.id, Project.name).where(
+                Project.id.in_(project_ids)
+            )
+        )
+        project_names = {
+            pid: name for pid, name in proj_result.all()
+        }
+    else:
+        project_names = {}
+
+    # Build employee data
+    employee_map: dict[str, dict] = {}
+    for employee, project_id, hours in rows:
+        if employee not in employee_map:
+            employee_map[employee] = {
+                "employee": employee,
+                "total_hours": 0.0,
+                "projects": [],
+            }
+        emp = employee_map[employee]
+        emp["total_hours"] += float(hours)
+        emp["projects"].append({
+            "project_id": project_id,
+            "project_name": project_names.get(
+                project_id, "Unbekannt"
+            ),
+            "hours": round(float(hours), 2),
+        })
+
+    employees = sorted(
+        employee_map.values(),
+        key=lambda e: e["total_hours"],
+        reverse=True,
+    )
+    for emp in employees:
+        emp["total_hours"] = round(emp["total_hours"], 2)
+        emp["project_count"] = len(emp["projects"])
+
+    return employees
 
 
 @router.get("/revenue", response_model=RevenueResponse)

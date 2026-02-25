@@ -1,9 +1,11 @@
 """CRUD endpoints for projects."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import STATUS_ACTIVE, STATUS_COMPLETED, STATUS_PAUSED
 from app.database import get_db
 from app.models import Project
 from app.schemas import ProjectCreate, ProjectRead, ProjectUpdate, ProjectWithHours
@@ -11,6 +13,13 @@ from app.services.bonus_calculator import calculate_bonus
 from app.services.hours_service import get_hours_by_project
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+
+class BulkStatusUpdate(BaseModel):
+    """Bulk status update request."""
+
+    project_ids: list[int]
+    status: str
 
 
 def _build_project_with_hours(
@@ -72,6 +81,45 @@ async def create_project(
     await db.refresh(project)
     hours_map = await get_hours_by_project(db, [project.id])
     return _build_project_with_hours(project, *hours_map.get(project.id, (0.0, 0.0)))
+
+
+@router.put("/bulk/status")
+async def bulk_update_status(
+    data: BulkStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update status for multiple projects at once."""
+    if data.status not in (STATUS_ACTIVE, STATUS_PAUSED, STATUS_COMPLETED):
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    result = await db.execute(
+        select(Project).where(Project.id.in_(data.project_ids))
+    )
+    projects = result.scalars().all()
+    updated = 0
+    for project in projects:
+        project.status = data.status
+        updated += 1
+    await db.commit()
+    return {"updated": updated}
+
+
+@router.delete("/bulk")
+async def bulk_delete(
+    project_ids: list[int] = Query(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete multiple projects at once."""
+    result = await db.execute(
+        select(Project).where(Project.id.in_(project_ids))
+    )
+    projects = result.scalars().all()
+    deleted = 0
+    for project in projects:
+        await db.delete(project)
+        deleted += 1
+    await db.commit()
+    return {"deleted": deleted}
 
 
 @router.get("/{project_id}", response_model=ProjectWithHours)
