@@ -14,3 +14,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Project status constants
+STATUS_ACTIVE = "aktiv"
+STATUS_PAUSED = "pausiert"
+STATUS_COMPLETED = "abgeschlossen"

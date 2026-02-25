@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import STATUS_ACTIVE
 from app.database import get_db
 from app.models import CustomerReportNote, Project, TimeEntry
 from app.schemas import (
@@ -31,7 +32,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     """Return dashboard KPIs: active projects, current month hours, bonus."""
     current_month = datetime.now().strftime("%Y-%m")
 
-    active_count = await db.scalar(select(func.count(Project.id)).where(Project.status == "aktiv"))
+    active_count = await db.scalar(select(func.count(Project.id)).where(Project.status == STATUS_ACTIVE))
 
     hours_result = await db.execute(
         select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
@@ -42,7 +43,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
 
     # Build per-project stats for active projects (single batch query)
     projects_result = await db.execute(
-        select(Project).where(Project.status == "aktiv").order_by(Project.name)
+        select(Project).where(Project.status == STATUS_ACTIVE).order_by(Project.name)
     )
     projects = list(projects_result.scalars().all())
 
@@ -373,7 +374,7 @@ async def get_revenue(
     year_prefix = str(year)
 
     result = await db.execute(
-        select(Project).where(Project.status == "aktiv").order_by(Project.name)
+        select(Project).where(Project.status == STATUS_ACTIVE).order_by(Project.name)
     )
     projects = list(result.scalars().all())
 
