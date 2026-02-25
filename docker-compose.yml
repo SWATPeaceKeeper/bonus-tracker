@@ -6,7 +6,7 @@ services:
       - backend-data:/app/data
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///data/bonus_tracker.db
-      - CORS_ORIGINS=[]
+      - CORS_ORIGINS=["http://localhost:5173"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
