@@ -94,6 +94,12 @@ DEFAULT_BONUS_RATE=0.02
 VITE_API_BASE_URL=/api          # Frontend (optional, defaults to /api)
 ```
 
+## Security Patterns
+
+- **HTML in PDFs:** All user-controlled strings must be passed through `html.escape()` before embedding in WeasyPrint HTML templates (`pdf_generator.py`). This prevents HTML injection, content spoofing, and SSRF via external resource loading.
+- **CSV export:** Use `csv.writer` with `csv.QUOTE_ALL` — never build CSV with f-strings. Prefix formula-triggering characters (`=`, `+`, `-`, `@`, `\t`, `\r`) with `'` via `_defuse_formula()` to prevent spreadsheet formula injection.
+- **HTTP filenames:** Use `safe_filename()` from `pdf_generator.py` to sanitize user input in `Content-Disposition` headers. Never interpolate raw user strings into HTTP headers.
+
 ## Linting Configuration
 
 - **Python (ruff):** line-length=100, target py311, rules: E F W I N UP B A SIM TCH
