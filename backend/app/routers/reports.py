@@ -17,6 +17,8 @@ from app.schemas import (
     FinanceReportResponse,
     MonthlyProjectReport,
     ProjectWithHours,
+    RevenueProjectData,
+    RevenueResponse,
 )
 from app.services.bonus_calculator import calculate_bonus
 
@@ -443,3 +445,102 @@ async def upsert_customer_note(
     await db.commit()
     await db.refresh(note)
     return note
+
+
+@router.get("/revenue", response_model=RevenueResponse)
+async def get_revenue(
+    year: int = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return revenue KPI dashboard data."""
+    if year is None:
+        year = datetime.now().year
+    year_prefix = str(year)
+
+    result = await db.execute(
+        select(Project)
+        .where(Project.status == "aktiv")
+        .order_by(Project.name)
+    )
+    projects = result.scalars().all()
+
+    total_deal = 0.0
+    total_rev = 0.0
+    utilizations: list[float] = []
+    project_data: list[RevenueProjectData] = []
+
+    for p in projects:
+        remote_r = await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(TimeEntry.duration_decimal), 0.0
+                )
+            ).where(
+                TimeEntry.project_id == p.id,
+                TimeEntry.month.startswith(year_prefix),
+                TimeEntry.is_onsite == False,  # noqa: E712
+            )
+        )
+        remote_h = float(remote_r.scalar_one())
+
+        onsite_r = await db.execute(
+            select(
+                func.coalesce(
+                    func.sum(TimeEntry.duration_decimal), 0.0
+                )
+            ).where(
+                TimeEntry.project_id == p.id,
+                TimeEntry.month.startswith(year_prefix),
+                TimeEntry.is_onsite == True,  # noqa: E712
+            )
+        )
+        onsite_h = float(onsite_r.scalar_one())
+
+        rate = p.hourly_rate or 0.0
+        onsite_rate = p.onsite_hourly_rate or rate
+        revenue = remote_h * rate + onsite_h * onsite_rate
+        total_h = remote_h + onsite_h
+
+        util = (
+            round(total_h / p.budget_hours, 2)
+            if p.budget_hours
+            else None
+        )
+        if util is not None:
+            utilizations.append(util)
+
+        if p.deal_value:
+            total_deal += p.deal_value
+        total_rev += revenue
+
+        project_data.append(
+            RevenueProjectData(
+                id=p.id,
+                name=p.name,
+                client=p.client,
+                deal_value=p.deal_value,
+                budget_hours=p.budget_hours,
+                total_hours=round(total_h, 2),
+                remote_hours=round(remote_h, 2),
+                onsite_hours=round(onsite_h, 2),
+                hourly_rate=p.hourly_rate,
+                onsite_hourly_rate=p.onsite_hourly_rate,
+                revenue=round(revenue, 2),
+                budget_utilization=util,
+                status=p.status,
+            )
+        )
+
+    avg_util = (
+        round(sum(utilizations) / len(utilizations), 2)
+        if utilizations
+        else 0.0
+    )
+
+    return RevenueResponse(
+        total_deal_value=round(total_deal, 2),
+        total_revenue=round(total_rev, 2),
+        avg_budget_utilization=avg_util,
+        active_projects=len(projects),
+        projects=project_data,
+    )

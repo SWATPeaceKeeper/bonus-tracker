@@ -154,6 +154,31 @@ export interface CustomerReportNote {
   note: string;
 }
 
+// GET /api/reports/revenue
+export interface RevenueProject {
+  id: number;
+  name: string;
+  client: string;
+  deal_value: number | null;
+  budget_hours: number | null;
+  total_hours: number;
+  remote_hours: number;
+  onsite_hours: number;
+  hourly_rate: number | null;
+  onsite_hourly_rate: number | null;
+  revenue: number;
+  budget_utilization: number | null;
+  status: string;
+}
+
+export interface RevenueData {
+  total_deal_value: number;
+  total_revenue: number;
+  avg_budget_utilization: number;
+  active_projects: number;
+  projects: RevenueProject[];
+}
+
 export interface ApiError {
   detail: string;
 }

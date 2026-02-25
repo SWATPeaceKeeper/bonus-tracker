@@ -184,3 +184,34 @@ class DashboardStats(BaseModel):
     total_hours_current_month: float = 0.0
     total_bonus_current_month: float = 0.0
     projects: list[ProjectWithHours] = Field(default_factory=list)
+
+
+# -- Revenue schemas --
+
+
+class RevenueProjectData(BaseModel):
+    """Per-project revenue data."""
+
+    id: int
+    name: str
+    client: str
+    deal_value: float | None
+    budget_hours: float | None
+    total_hours: float
+    remote_hours: float
+    onsite_hours: float
+    hourly_rate: float | None
+    onsite_hourly_rate: float | None
+    revenue: float
+    budget_utilization: float | None
+    status: str
+
+
+class RevenueResponse(BaseModel):
+    """Revenue KPI dashboard data."""
+
+    total_deal_value: float
+    total_revenue: float
+    avg_budget_utilization: float
+    active_projects: int
+    projects: list[RevenueProjectData]
