@@ -17,6 +17,7 @@ from app.schemas import (
     EmployeeHours,
     FinanceReportResponse,
     MonthlyProjectReport,
+    ProjectDetailReport,
     ProjectWithHours,
     RevenueProjectData,
     RevenueResponse,
@@ -180,7 +181,7 @@ async def _finance_for_month(db: AsyncSession, month: str):
     return project_reports, total_hours, total_bonus
 
 
-@router.get("/project/{project_id}")
+@router.get("/project/{project_id}", response_model=ProjectDetailReport)
 async def get_project_report(
     project_id: int,
     month: str | None = Query(None),

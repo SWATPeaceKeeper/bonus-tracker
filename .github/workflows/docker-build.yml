@@ -9,7 +9,49 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b # v7.3.0
+
+      - name: Install backend dependencies
+        run: cd backend && uv sync --frozen
+
+      - name: Lint backend
+        run: cd backend && uv run ruff check app/
+
+      - name: Test backend
+        run: cd backend && uv run pytest tests/ -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Lint frontend
+        run: cd frontend && npx eslint src/ --quiet
+
+      - name: Type check frontend
+        run: cd frontend && npx tsc --noEmit
+
   build-backend:
+    needs: [validate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,7 +99,16 @@ jobs:
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
 
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}-backend:latest
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"
+
   build-frontend:
+    needs: [validate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -104,3 +155,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Scan frontend image with Trivy
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}-frontend:latest
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"
