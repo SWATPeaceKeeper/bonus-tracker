@@ -11,8 +11,8 @@ node_modules/
 dist/
 
 # Data
-data/*.db
-data/*.db-journal
+data/
+backend/data/
 
 # Environment
 .env
