@@ -25,19 +25,19 @@ export function useApi<T>(
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setError(null);
 
     fetcher()
       .then((result) => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           setData(result);
           setLoading(false);
         }
       })
       .catch((err: unknown) => {
-        if (!cancelled) {
+        if (!controller.signal.aborted) {
           const message =
             err instanceof Error
               ? err.message
@@ -48,7 +48,7 @@ export function useApi<T>(
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger, ...deps]);
