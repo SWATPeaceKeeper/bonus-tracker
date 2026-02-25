@@ -11,14 +11,8 @@ import DataTable, { type Column } from "@/components/DataTable";
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get } from "@/api/client";
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatNumber, STATUS_LABELS } from "@/lib/utils";
 import type { DashboardStats, Project } from "@/types";
-
-const STATUS_LABELS: Record<string, string> = {
-  aktiv: "Aktiv",
-  pausiert: "Pausiert",
-  abgeschlossen: "Abgeschlossen",
-};
 
 const projectColumns: Column<Project>[] = [
   {

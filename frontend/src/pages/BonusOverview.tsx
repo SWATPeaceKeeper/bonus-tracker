@@ -24,14 +24,8 @@ import {
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get } from "@/api/client";
-import { cn, formatCurrency, formatNumber, getMonthName } from "@/lib/utils";
+import { cn, formatCurrency, formatNumber, getMonthName, CURRENT_YEAR, YEARS, ALL_MONTHS } from "@/lib/utils";
 import type { FinanceMonth, MonthlyProjectReport } from "@/types";
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) =>
-  String(CURRENT_YEAR - i),
-);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 interface MonthRow {
   month: number;
@@ -60,7 +54,7 @@ export default function BonusOverview() {
       }
     }
 
-    const rows: MonthRow[] = MONTHS.map((m) => {
+    const rows: MonthRow[] = ALL_MONTHS.map((m) => {
       const fm = monthMap.get(m);
       return {
         month: m,

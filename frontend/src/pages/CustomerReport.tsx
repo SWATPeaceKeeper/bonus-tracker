@@ -27,10 +27,9 @@ import {
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get, post, getDownloadUrl } from "@/api/client";
-import { formatNumber, getMonthName } from "@/lib/utils";
+import { formatNumber, getMonthName, CURRENT_YEAR } from "@/lib/utils";
 import type { CustomerReportData } from "@/types";
 
-const CURRENT_YEAR = new Date().getFullYear();
 const CURRENT_MONTH = new Date().getMonth() + 1;
 
 function buildMonthOptions(): Array<{ value: string; label: string }> {
@@ -123,7 +122,7 @@ export default function CustomerReport() {
             className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Zurueck zum Projekt
+            Zurück zum Projekt
           </Link>
           <h1 className="text-2xl font-bold">Kundenbericht</h1>
           <p className="text-muted-foreground">
@@ -204,7 +203,7 @@ export default function CustomerReport() {
         <CardContent>
           {data.employees.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Keine Eintraege fuer diesen Monat.
+              Keine Einträge für diesen Monat.
             </p>
           ) : (
             <Table>
@@ -259,7 +258,7 @@ export default function CustomerReport() {
           <textarea
             className="w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             rows={4}
-            placeholder="Notiz fuer diesen Monat..."
+            placeholder="Notiz für diesen Monat..."
             value={displayNote}
             onChange={(e) => setNoteText(e.target.value)}
           />

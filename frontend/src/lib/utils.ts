@@ -43,3 +43,28 @@ const MONTH_NAMES = [
 export function getMonthName(month: number): string {
   return MONTH_NAMES[month - 1] ?? `Monat ${month}`;
 }
+
+/** Current year and common year/month arrays for selectors. */
+export const CURRENT_YEAR = new Date().getFullYear();
+export const YEARS = Array.from({ length: 5 }, (_, i) =>
+  String(CURRENT_YEAR - i),
+);
+export const ALL_MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** Project status display labels and badge variants. */
+export type ProjectStatus = "aktiv" | "pausiert" | "abgeschlossen";
+
+export const STATUS_LABELS: Record<ProjectStatus, string> = {
+  aktiv: "Aktiv",
+  pausiert: "Pausiert",
+  abgeschlossen: "Abgeschlossen",
+};
+
+export const STATUS_VARIANTS: Record<
+  ProjectStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  aktiv: "default",
+  pausiert: "outline",
+  abgeschlossen: "secondary",
+};

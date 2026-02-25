@@ -1,35 +1,24 @@
 """CRUD endpoints for projects."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Project, TimeEntry
+from app.models import Project
 from app.schemas import ProjectCreate, ProjectRead, ProjectUpdate, ProjectWithHours
 from app.services.bonus_calculator import calculate_bonus
+from app.services.hours_service import get_hours_by_project
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-async def _enrich_project(project: Project, db: AsyncSession) -> ProjectWithHours:
-    """Add computed hours and bonus fields to a project."""
-    remote_result = await db.execute(
-        select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-            TimeEntry.project_id == project.id,
-            TimeEntry.is_onsite == False,  # noqa: E712
-        )
-    )
-    remote_hours = float(remote_result.scalar_one())
-
-    onsite_result = await db.execute(
-        select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
-            TimeEntry.project_id == project.id,
-            TimeEntry.is_onsite == True,  # noqa: E712
-        )
-    )
-    onsite_hours = float(onsite_result.scalar_one())
-
+def _build_project_with_hours(
+    project: Project,
+    remote_hours: float,
+    onsite_hours: float,
+) -> ProjectWithHours:
+    """Build ProjectWithHours from a project and its hour totals."""
     total_hours = remote_hours + onsite_hours
     bonus_amount = calculate_bonus(
         remote_hours=remote_hours,
@@ -56,8 +45,13 @@ async def list_projects(
     if status:
         stmt = stmt.where(Project.status == status)
     result = await db.execute(stmt)
-    projects = result.scalars().all()
-    return [await _enrich_project(p, db) for p in projects]
+    projects = list(result.scalars().all())
+
+    hours_map = await get_hours_by_project(db, [p.id for p in projects])
+    return [
+        _build_project_with_hours(p, *hours_map.get(p.id, (0.0, 0.0)))
+        for p in projects
+    ]
 
 
 @router.post("", response_model=ProjectWithHours, status_code=201)
@@ -76,7 +70,8 @@ async def create_project(
     db.add(project)
     await db.commit()
     await db.refresh(project)
-    return await _enrich_project(project, db)
+    hours_map = await get_hours_by_project(db, [project.id])
+    return _build_project_with_hours(project, *hours_map.get(project.id, (0.0, 0.0)))
 
 
 @router.get("/{project_id}", response_model=ProjectWithHours)
@@ -88,7 +83,8 @@ async def get_project(
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    return await _enrich_project(project, db)
+    hours_map = await get_hours_by_project(db, [project.id])
+    return _build_project_with_hours(project, *hours_map.get(project.id, (0.0, 0.0)))
 
 
 @router.put("/{project_id}", response_model=ProjectWithHours)
@@ -106,7 +102,8 @@ async def update_project(
         setattr(project, key, value)
     await db.commit()
     await db.refresh(project)
-    return await _enrich_project(project, db)
+    hours_map = await get_hours_by_project(db, [project.id])
+    return _build_project_with_hours(project, *hours_map.get(project.id, (0.0, 0.0)))
 
 
 @router.delete("/{project_id}", status_code=204)
