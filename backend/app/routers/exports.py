@@ -150,26 +150,59 @@ async def _build_finance_data(
     """Build aggregated project data for finance export."""
     year_prefix = str(year)
 
-    result = await db.execute(
-        select(
-            TimeEntry.project_id,
-            func.sum(TimeEntry.duration_decimal),
-        )
+    # Get distinct projects with time entries in this year
+    pid_result = await db.execute(
+        select(TimeEntry.project_id)
         .where(TimeEntry.month.startswith(year_prefix))
-        .group_by(TimeEntry.project_id)
+        .distinct()
     )
+    project_db_ids = [row[0] for row in pid_result.all()]
 
     projects_data = []
-    for project_db_id, total_hours in result.all():
+    for project_db_id in project_db_ids:
         project = await db.get(Project, project_db_id)
         if not project:
             continue
-        h = round(float(total_hours), 2)
-        bonus = calculate_bonus(h, project.hourly_rate, project.bonus_rate)
+
+        remote_result = await db.execute(
+            select(
+                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
+            ).where(
+                and_(
+                    TimeEntry.project_id == project_db_id,
+                    TimeEntry.month.startswith(year_prefix),
+                    TimeEntry.is_onsite == False,  # noqa: E712
+                )
+            )
+        )
+        remote_h = float(remote_result.scalar_one())
+
+        onsite_result = await db.execute(
+            select(
+                func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)
+            ).where(
+                and_(
+                    TimeEntry.project_id == project_db_id,
+                    TimeEntry.month.startswith(year_prefix),
+                    TimeEntry.is_onsite == True,  # noqa: E712
+                )
+            )
+        )
+        onsite_h = float(onsite_result.scalar_one())
+
+        h = round(remote_h + onsite_h, 2)
+        bonus = calculate_bonus(
+            remote_hours=remote_h,
+            onsite_hours=onsite_h,
+            hourly_rate=project.hourly_rate,
+            onsite_hourly_rate=project.onsite_hourly_rate,
+            bonus_rate=project.bonus_rate,
+        )
         projects_data.append({
             "project_name": project.name,
             "client": project.client,
             "hourly_rate": project.hourly_rate,
+            "onsite_hourly_rate": project.onsite_hourly_rate,
             "bonus_rate": project.bonus_rate,
             "total_hours": h,
             "total_bonus": bonus,
