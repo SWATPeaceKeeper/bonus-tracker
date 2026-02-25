@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bonus Tracker is a full-stack app replacing an Excel-based Pre-Sales Bonus Tracker. It processes Clockify CSV time-tracking exports, calculates bonuses (hours × hourly_rate × bonus_rate), and generates finance/customer reports with PDF export.
+Bonus Tracker is a full-stack app replacing an Excel-based Pre-Sales Bonus Tracker. It processes Clockify CSV time-tracking exports, calculates bonuses with remote/onsite hour split, and generates finance/customer reports with PDF export. Includes a revenue KPI dashboard for project-level deal tracking.
 
 ## Tech Stack
 
@@ -57,7 +57,7 @@ Layered async FastAPI application:
 - **`routers/`** — `projects`, `imports`, `reports`, `exports`, `time_entries`
 - **`services/`** — `csv_parser` (Clockify format), `bonus_calculator`, `pdf_generator` (WeasyPrint)
 
-Database dependency injection via `get_db` AsyncSession. Projects carry computed `total_hours` and `bonus_amount` (aggregated at query time, not stored).
+Database dependency injection via `get_db` AsyncSession. Projects carry computed `total_hours`, `remote_hours`, `onsite_hours`, and `bonus_amount` (aggregated at query time, not stored).
 
 ### Frontend (`frontend/src/`)
 
@@ -65,7 +65,7 @@ SPA with lazy-loaded pages:
 
 - **`api/client.ts`** — Fetch wrapper (get/post/put/del/uploadFile) hitting `/api`
 - **`hooks/useApi.ts`** — Generic data-fetching hook with loading/error/refetch
-- **`pages/`** — Dashboard, Projects, ProjectDetail, Import, FinanceReport, BonusOverview, CustomerReport
+- **`pages/`** — Dashboard, Projects, ProjectDetail, Import, FinanceReport, BonusOverview, CustomerReport, Revenue
 - **`components/ui/`** — shadcn/ui primitives (install new ones via `npx shadcn@latest add <component>`)
 - **`types/index.ts`** — TypeScript interfaces mirroring backend schemas
 - **`lib/utils.ts`** — Formatters (currency, numbers, dates)
@@ -74,12 +74,22 @@ Vite dev server proxies `/api` to `localhost:8000` — run backend and frontend 
 
 ### Data Model
 
-- **Project** — Clockify project with bonus config (hourly_rate, bonus_rate, budget_hours, status)
-- **TimeEntry** — Individual time log linked to Project and ImportBatch, indexed by `month` (YYYY-MM)
+- **Project** — Clockify project with bonus config (hourly_rate, onsite_hourly_rate, bonus_rate, budget_hours, status, project_manager, customer_contact)
+- **TimeEntry** — Individual time log linked to Project and ImportBatch, indexed by `month` (YYYY-MM), with `is_onsite` flag
 - **ImportBatch** — Tracks each CSV upload (filename, row_count, timestamp)
 - **CustomerReportNote** — Per-project, per-month editable notes for customer reports
 
 Project status values: `aktiv`, `pausiert`, `abgeschlossen` (German).
+
+### Bonus Calculation
+
+```
+remote_bonus = remote_hours * hourly_rate * bonus_rate
+onsite_bonus = onsite_hours * (onsite_hourly_rate or hourly_rate) * bonus_rate
+total_bonus = remote_bonus + onsite_bonus
+```
+
+`calculate_bonus()` in `services/bonus_calculator.py` takes 5 params: `remote_hours`, `onsite_hours`, `hourly_rate`, `onsite_hourly_rate`, `bonus_rate`. All callers (projects, reports, exports) query remote/onsite hours separately via `TimeEntry.is_onsite`.
 
 ### Nginx (`frontend/nginx.conf`)
 
@@ -93,6 +103,14 @@ CORS_ORIGINS=["http://localhost:5173"]
 DEFAULT_BONUS_RATE=0.02
 VITE_API_BASE_URL=/api          # Frontend (optional, defaults to /api)
 ```
+
+### PDF Generation
+
+Customer and finance PDFs are generated via WeasyPrint in `services/pdf_generator.py`:
+
+- **Customer PDF** (`generate_customer_pdf`) — Takes `month` (YYYY-MM), not year. Includes signature fields for project_manager and customer_contact. Full A4 layout, no creation date.
+- **Finance PDF** (`generate_finance_pdf`) — Accepts optional `month_str` for monthly export. Without it, generates yearly overview.
+- Docker image includes `de_DE.UTF-8` locale for correct German number formatting.
 
 ## Security Patterns
 
@@ -112,4 +130,4 @@ Backend only. Tests use in-memory SQLite (`sqlite+aiosqlite://`), async pytest w
 
 ## CI/CD
 
-GitHub Actions workflow (`.github/workflows/docker-build.yml`): builds and pushes Docker images to GHCR on push to `main` or semantic version tags (`v*.*.*`). Multi-platform: linux/amd64 + linux/arm64.
+GitHub Actions workflow (`.github/workflows/docker-build.yml`): two parallel jobs (`build-backend`, `build-frontend`) build and push Docker images to GHCR on push to `main` or semantic version tags (`v*.*.*`). Multi-platform: linux/amd64 + linux/arm64. Uses GHA cache for BuildKit layers.

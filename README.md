@@ -5,10 +5,12 @@ Web-based Pre-Sales Bonus Tracker that replaces manual Excel workflows. Imports 
 ## Features
 
 - **Clockify CSV Import** — Upload detailed time reports, auto-create projects, detect duplicates
-- **Project Management** — Track projects with hourly rates, bonus rates, budgets, and status
-- **Finance Report** — Monthly bonus summary per project with CSV/PDF export
-- **Customer Report** — Per-project monthly hour matrix with detail entries, notes, and PDF export
-- **Dashboard** — KPIs for active projects, current month hours, and bonus totals
+- **Project Management** — Track projects with hourly rates, onsite rates, bonus rates, budgets, project manager, and customer contact
+- **Remote/OnSite Tracking** — Mark time entries as on-site with separate hourly rate for bonus calculation
+- **Finance Report** — Monthly or yearly bonus summary per project with CSV/PDF export
+- **Customer Report** — Per-project monthly report with signature fields for PM and customer, PDF export
+- **Revenue Dashboard** — KPIs for deal values, revenue (hours x rate), and budget utilization
+- **Bonus Dashboard** — KPIs for active projects, current month hours, and bonus totals
 
 ## Tech Stack
 
@@ -70,10 +72,14 @@ Uses pre-built images from GHCR. Set `BONUS_VERSION` to pin a specific version (
 ## Bonus Calculation
 
 ```
-bonus = total_hours x hourly_rate x bonus_rate
+remote_bonus = remote_hours x hourly_rate x bonus_rate
+onsite_bonus = onsite_hours x onsite_hourly_rate x bonus_rate
+total_bonus  = remote_bonus + onsite_bonus
 ```
 
-Example: 100 hours at 120 EUR/h with 2% bonus rate = 240 EUR bonus.
+If no onsite hourly rate is set, the standard hourly rate is used for on-site hours as well.
+
+Example: 80 remote hours at 120 EUR/h + 20 onsite hours at 150 EUR/h with 2% bonus rate = 192 + 60 = 252 EUR bonus.
 
 ## License
 
