@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,16 +23,8 @@ import DataTable, { type Column } from "@/components/DataTable";
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get, post, put, del } from "@/api/client";
-import { cn, formatCurrency, formatNumber } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import type { Project, ProjectCreate } from "@/types";
-
-type CalcField = "deal_value" | "budget_hours" | "hourly_rate";
-const CALC_FIELDS: CalcField[] = [
-  "deal_value",
-  "budget_hours",
-  "hourly_rate",
-];
-
 
 type ProjectStatus = Project["status"];
 
@@ -69,6 +61,9 @@ const EMPTY_FORM: ProjectCreate = {
   bonus_rate: 0.02,
   status: "aktiv",
   start_date: null,
+  onsite_hourly_rate: null,
+  project_manager: null,
+  customer_contact: null,
 };
 
 export default function Projects() {
@@ -81,14 +76,10 @@ export default function Projects() {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<ProjectCreate>({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
-  const [autoCalcField, setAutoCalcField] = useState<CalcField | null>(
-    null,
-  );
 
   function openCreate() {
     setEditId(null);
     setForm({ ...EMPTY_FORM });
-    setAutoCalcField(null);
     setDialogOpen(true);
   }
 
@@ -104,8 +95,10 @@ export default function Projects() {
       bonus_rate: project.bonus_rate,
       status: project.status,
       start_date: project.start_date,
+      onsite_hourly_rate: project.onsite_hourly_rate,
+      project_manager: project.project_manager,
+      customer_contact: project.customer_contact,
     });
-    setAutoCalcField(null);
     setDialogOpen(true);
   }
 
@@ -145,56 +138,11 @@ export default function Projects() {
     }
   }
 
-  const autoCalc = useCallback(
-    (next: ProjectCreate, changed: keyof ProjectCreate) => {
-      if (!CALC_FIELDS.includes(changed as CalcField)) return;
-
-      const dv = next.deal_value;
-      const bh = next.budget_hours;
-      const hr = next.hourly_rate;
-
-      const filled = [dv, bh, hr].filter(
-        (v) => v != null && v !== 0,
-      ).length;
-
-      // All 3 manually filled or <2 filled → no auto-calc
-      if (filled !== 2) {
-        setAutoCalcField(null);
-        return;
-      }
-
-      if (dv != null && bh != null && hr == null && bh > 0) {
-        setForm((f) => ({
-          ...f,
-          hourly_rate: Math.round((dv / bh) * 100) / 100,
-        }));
-        setAutoCalcField("hourly_rate");
-      } else if (dv != null && hr != null && bh == null && hr > 0) {
-        setForm((f) => ({
-          ...f,
-          budget_hours: Math.round((dv / hr) * 100) / 100,
-        }));
-        setAutoCalcField("budget_hours");
-      } else if (bh != null && hr != null && dv == null) {
-        setForm((f) => ({
-          ...f,
-          deal_value: Math.round(bh * hr * 100) / 100,
-        }));
-        setAutoCalcField("deal_value");
-      } else {
-        setAutoCalcField(null);
-      }
-    },
-    [],
-  );
-
   function updateField<K extends keyof ProjectCreate>(
     key: K,
     value: ProjectCreate[K],
   ) {
-    const next = { ...form, [key]: value };
-    setForm(next);
-    autoCalc(next, key);
+    setForm({ ...form, [key]: value });
   }
 
   function parseOptionalNumber(value: string): number | null {
@@ -357,11 +305,6 @@ export default function Projects() {
               <div className="grid gap-2">
                 <label className="text-sm font-medium">
                   Deal-Wert
-                  {autoCalcField === "deal_value" && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (Berechnet)
-                    </span>
-                  )}
                 </label>
                 <Input
                   type="number"
@@ -375,19 +318,11 @@ export default function Projects() {
                     )
                   }
                   placeholder="Optional"
-                  className={cn(
-                    autoCalcField === "deal_value" && "bg-muted",
-                  )}
                 />
               </div>
               <div className="grid gap-2">
                 <label className="text-sm font-medium">
                   Budget (Stunden)
-                  {autoCalcField === "budget_hours" && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (Berechnet)
-                    </span>
-                  )}
                 </label>
                 <Input
                   type="number"
@@ -400,9 +335,6 @@ export default function Projects() {
                     )
                   }
                   placeholder="Optional"
-                  className={cn(
-                    autoCalcField === "budget_hours" && "bg-muted",
-                  )}
                 />
               </div>
             </div>
@@ -411,11 +343,6 @@ export default function Projects() {
               <div className="grid gap-2">
                 <label className="text-sm font-medium">
                   Stundensatz
-                  {autoCalcField === "hourly_rate" && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (Berechnet)
-                    </span>
-                  )}
                 </label>
                 <Input
                   type="number"
@@ -429,9 +356,6 @@ export default function Projects() {
                     )
                   }
                   placeholder="Optional"
-                  className={cn(
-                    autoCalcField === "hourly_rate" && "bg-muted",
-                  )}
                 />
               </div>
               <div className="grid gap-2">
@@ -470,6 +394,50 @@ export default function Projects() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">
+                OnSite-Stundensatz
+              </label>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={form.onsite_hourly_rate ?? ""}
+                onChange={(e) =>
+                  updateField(
+                    "onsite_hourly_rate",
+                    parseOptionalNumber(e.target.value),
+                  )
+                }
+                placeholder="Optional"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Projektleiter</label>
+                <Input
+                  value={form.project_manager ?? ""}
+                  onChange={(e) =>
+                    updateField("project_manager", e.target.value || null)
+                  }
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">
+                  Kundenansprechpartner
+                </label>
+                <Input
+                  value={form.customer_contact ?? ""}
+                  onChange={(e) =>
+                    updateField("customer_contact", e.target.value || null)
+                  }
+                  placeholder="Optional"
+                />
               </div>
             </div>
 

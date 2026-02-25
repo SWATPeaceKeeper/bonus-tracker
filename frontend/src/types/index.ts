@@ -15,6 +15,11 @@ export interface Project {
   updated_at: string;
   total_hours: number;
   bonus_amount: number;
+  remote_hours: number;
+  onsite_hours: number;
+  onsite_hourly_rate: number | null;
+  project_manager: string | null;
+  customer_contact: string | null;
 }
 
 export interface ProjectCreate {
@@ -27,6 +32,9 @@ export interface ProjectCreate {
   bonus_rate?: number;
   status?: string;
   start_date?: string | null;
+  onsite_hourly_rate?: number | null;
+  project_manager?: string | null;
+  customer_contact?: string | null;
 }
 
 export interface ProjectUpdate {
@@ -38,6 +46,9 @@ export interface ProjectUpdate {
   bonus_rate?: number | null;
   status?: string;
   start_date?: string | null;
+  onsite_hourly_rate?: number | null;
+  project_manager?: string | null;
+  customer_contact?: string | null;
 }
 
 export interface TimeEntry {
