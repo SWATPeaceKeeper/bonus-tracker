@@ -41,44 +41,56 @@ async def upload_csv(
             detail=f"No valid entries found. Errors: {result.errors}",
         )
 
-    projects_created = await _ensure_projects(result.projects, db)
-    project_map = await _build_project_map(db)
+    try:
+        async with db.begin_nested():
+            projects_created = await _ensure_projects(result.projects, db)
+            project_map = await _build_project_map(db)
 
-    batch = ImportBatch(filename=file.filename, row_count=0)
-    db.add(batch)
-    await db.flush()
+            batch = ImportBatch(filename=file.filename, row_count=0)
+            db.add(batch)
+            await db.flush()
 
-    imported = 0
-    for entry in result.entries:
-        db_project_id = project_map.get(entry.project_id)
-        if db_project_id is None:
-            continue
+            imported = 0
+            for entry in result.entries:
+                db_project_id = project_map.get(entry.project_id)
+                if db_project_id is None:
+                    continue
 
-        is_dup = await _is_duplicate(
-            db,
-            db_project_id,
-            entry.employee,
-            entry.date,
-            entry.duration_decimal,
-        )
-        if is_dup:
-            continue
+                is_dup = await _is_duplicate(
+                    db,
+                    db_project_id,
+                    entry.employee,
+                    entry.date,
+                    entry.duration_decimal,
+                )
+                if is_dup:
+                    continue
 
-        time_entry = TimeEntry(
-            project_id=db_project_id,
-            date=entry.date.date(),
-            duration_decimal=entry.duration_decimal,
-            employee=entry.employee,
-            description=entry.description,
-            start_time=entry.start_time.time() if entry.start_time else None,
-            end_time=entry.end_time.time() if entry.end_time else None,
-            month=entry.month,
-            import_batch_id=batch.id,
-        )
-        db.add(time_entry)
-        imported += 1
+                time_entry = TimeEntry(
+                    project_id=db_project_id,
+                    date=entry.date.date(),
+                    duration_decimal=entry.duration_decimal,
+                    employee=entry.employee,
+                    description=entry.description,
+                    start_time=(
+                        entry.start_time.time() if entry.start_time else None
+                    ),
+                    end_time=(
+                        entry.end_time.time() if entry.end_time else None
+                    ),
+                    month=entry.month,
+                    import_batch_id=batch.id,
+                )
+                db.add(time_entry)
+                imported += 1
 
-    batch.row_count = imported
+            batch.row_count = imported
+    except Exception:
+        raise HTTPException(
+            status_code=500,
+            detail="Import failed — all changes rolled back",
+        ) from None
+
     await db.commit()
 
     return ImportResult(

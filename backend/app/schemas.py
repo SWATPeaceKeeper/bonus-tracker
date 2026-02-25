@@ -204,6 +204,51 @@ class CustomerReportNoteRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# -- Project detail report schemas --
+
+
+class ProjectInfo(BaseModel):
+    """Project metadata for detail reports."""
+
+    id: int
+    project_id: str
+    name: str
+    client: str
+    budget_hours: float | None
+    hourly_rate: float | None
+    onsite_hourly_rate: float | None
+    bonus_rate: float
+    status: str
+
+
+class MonthlyBreakdown(BaseModel):
+    """Monthly hours/bonus breakdown."""
+
+    month: str
+    hours: float
+    remote_hours: float
+    onsite_hours: float
+    bonus: float
+
+
+class EmployeeBreakdown(BaseModel):
+    """Employee hours breakdown."""
+
+    employee: str
+    total_hours: float
+
+
+class ProjectDetailReport(BaseModel):
+    """Full project detail report."""
+
+    project: ProjectInfo
+    total_hours: float
+    total_bonus: float
+    budget_remaining: float | None
+    monthly_breakdown: list[MonthlyBreakdown]
+    employee_breakdown: list[EmployeeBreakdown]
+
+
 # -- Dashboard schemas --
 
 
