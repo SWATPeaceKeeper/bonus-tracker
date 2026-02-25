@@ -88,9 +88,7 @@ class TestCustomerReport:
     """Tests for the customer report endpoint."""
 
     async def test_customer_report(self, client, seeded_data):
-        resp = await client.get(
-            f"/api/reports/customer/{seeded_data}?month=2026-02"
-        )
+        resp = await client.get(f"/api/reports/customer/{seeded_data}?month=2026-02")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total_hours"] == 5.0
@@ -114,26 +112,44 @@ class TestCustomerReport:
         assert resp.json()["note"] == "Updated note"
 
         # Verify via customer report
-        resp = await client.get(
-            f"/api/reports/customer/{seeded_data}?month=2026-02"
-        )
+        resp = await client.get(f"/api/reports/customer/{seeded_data}?month=2026-02")
         assert resp.json()["note"] == "Updated note"
+
+
+class TestRevenueEndpoint:
+    """Tests for the revenue endpoint."""
+
+    async def test_revenue_endpoint(self, client, seeded_data):
+        """Verify revenue endpoint returns expected structure."""
+        resp = await client.get("/api/reports/revenue")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "total_deal_value" in data
+        assert "total_revenue" in data
+        assert "avg_budget_utilization" in data
+        assert "active_projects" in data
+        assert "projects" in data
+
+    async def test_revenue_empty(self, client):
+        """Verify revenue endpoint works with no data."""
+        resp = await client.get("/api/reports/revenue")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["active_projects"] == 0
+        assert data["total_revenue"] == 0.0
+        assert data["projects"] == []
 
 
 class TestTimeEntries:
     """Tests for the time entries endpoint."""
 
     async def test_list_entries(self, client, seeded_data):
-        resp = await client.get(
-            f"/api/time-entries?project_id={seeded_data}"
-        )
+        resp = await client.get(f"/api/time-entries?project_id={seeded_data}")
         assert resp.status_code == 200
         assert len(resp.json()) == 2
 
     async def test_filter_by_employee(self, client, seeded_data):
-        resp = await client.get(
-            f"/api/time-entries?project_id={seeded_data}&employee=Anna Schmidt"
-        )
+        resp = await client.get(f"/api/time-entries?project_id={seeded_data}&employee=Anna Schmidt")
         assert resp.status_code == 200
         entries = resp.json()
         assert len(entries) == 1
