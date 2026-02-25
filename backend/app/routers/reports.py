@@ -1,6 +1,6 @@
 """Report endpoints for dashboard, finance, project detail, and customer reports."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select
@@ -30,9 +30,11 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 @router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard(db: AsyncSession = Depends(get_db)):
     """Return dashboard KPIs: active projects, current month hours, bonus."""
-    current_month = datetime.now().strftime("%Y-%m")
+    current_month = datetime.now(UTC).strftime("%Y-%m")
 
-    active_count = await db.scalar(select(func.count(Project.id)).where(Project.status == STATUS_ACTIVE))
+    active_count = await db.scalar(
+        select(func.count(Project.id)).where(Project.status == STATUS_ACTIVE)
+    )
 
     hours_result = await db.execute(
         select(func.coalesce(func.sum(TimeEntry.duration_decimal), 0.0)).where(
@@ -101,7 +103,7 @@ async def get_finance_report(
 ):
     """Return per-month finance breakdown across all projects."""
     if year is None:
-        year = datetime.now().year
+        year = datetime.now(UTC).year
 
     year_prefix = str(year)
 
@@ -370,7 +372,7 @@ async def get_revenue(
 ):
     """Return revenue KPI dashboard data."""
     if year is None:
-        year = datetime.now().year
+        year = datetime.now(UTC).year
     year_prefix = str(year)
 
     result = await db.execute(

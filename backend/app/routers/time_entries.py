@@ -16,6 +16,8 @@ async def list_time_entries(
     project_id: int | None = Query(None),
     month: str | None = Query(None),
     employee: str | None = Query(None),
+    limit: int = Query(default=500, ge=1, le=5000),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
     """List time entries with optional filters."""
@@ -26,5 +28,6 @@ async def list_time_entries(
         stmt = stmt.where(TimeEntry.month == month)
     if employee:
         stmt = stmt.where(TimeEntry.employee == employee)
+    stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
     return result.scalars().all()

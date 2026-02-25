@@ -92,7 +92,7 @@ def parse_csv(content: str) -> ParseResult:
                     name=entry.project_name,
                     client=entry.client,
                 )
-        except Exception as exc:
+        except (ValueError, KeyError, AttributeError) as exc:
             result.errors.append(f"Row {row_num}: unexpected error: {exc}")
 
     result.projects = list(seen_projects.values())
