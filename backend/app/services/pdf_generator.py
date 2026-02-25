@@ -22,15 +22,15 @@ GERMAN_MONTHS = {
 }
 
 PDF_CSS = """
+@page { size: A4; margin: 10mm 15mm; }
 body {
     font-family: Helvetica, Arial, sans-serif;
-    font-size: 11px;
+    font-size: 12px;
     color: #222;
-    margin: 20mm 15mm;
 }
-h1 { font-size: 18px; margin-bottom: 4px; }
-h2 { font-size: 14px; margin-top: 20px; color: #444; }
-.subtitle { color: #666; font-size: 12px; margin-bottom: 16px; }
+h1 { font-size: 22px; margin-bottom: 4px; }
+h2 { font-size: 16px; margin-top: 20px; color: #444; }
+.subtitle { color: #666; font-size: 13px; margin-bottom: 16px; }
 table {
     width: 100%;
     border-collapse: collapse;
@@ -50,7 +50,13 @@ th {
 .total-row { font-weight: bold; background: #f5f5f5; }
 .note { margin-top: 8px; padding: 8px; background: #fafafa;
         border-left: 3px solid #ccc; }
-.footer { margin-top: 24px; font-size: 9px; color: #999; }
+.signatures { margin-top: 60px; }
+.sig-table { width: 100%; border: none; }
+.sig-table td { border: none; width: 45%; vertical-align: top; padding: 0; }
+.sig-table td.spacer { width: 10%; }
+.sig-line { border-top: 1px solid #333; margin-top: 50px; padding-top: 6px; }
+.sig-name { font-weight: bold; margin-bottom: 2px; }
+.sig-label { font-size: 10px; color: #666; }
 """
 
 
@@ -85,20 +91,24 @@ def german_month(month_str: str) -> str:
 def generate_customer_pdf(
     project_name: str,
     client: str,
-    year: int,
+    month: str,
     monthly_data: list[dict],
     entries_by_month: dict[str, list[dict]],
     notes_by_month: dict[str, str],
+    project_manager: str | None = None,
+    customer_contact: str | None = None,
 ) -> bytes:
     """Generate a customer report PDF.
 
     Args:
         project_name: Display name of the project.
         client: Client name.
-        year: Report year.
+        month: Report month in YYYY-MM format.
         monthly_data: List of {month, hours} dicts.
         entries_by_month: Time entries grouped by month key.
         notes_by_month: Notes keyed by month string.
+        project_manager: Name of the project manager for signature.
+        customer_contact: Name of the customer contact for signature.
 
     Returns:
         PDF file content as bytes.
@@ -146,10 +156,33 @@ def generate_customer_pdf(
             )
         detail_sections += "</table>"
 
+    signatures = """
+<table class='sig-table'>
+<tr>
+<td>
+<div class='sig-line'>
+<div class='sig-name'>{pm}</div>
+<div class='sig-label'>Datum / Unterschrift Projektleiter</div>
+</div>
+</td>
+<td class='spacer'></td>
+<td>
+<div class='sig-line'>
+<div class='sig-name'>{cc}</div>
+<div class='sig-label'>Datum / Unterschrift Kunde</div>
+</div>
+</td>
+</tr>
+</table>
+""".format(
+        pm=escape(project_manager or ""),
+        cc=escape(customer_contact or ""),
+    )
+
     html = f"""<!DOCTYPE html>
 <html><head><style>{PDF_CSS}</style></head><body>
 <h1>{escape(project_name)}</h1>
-<div class='subtitle'>Kunde: {escape(client)} | Jahr: {year}</div>
+<div class='subtitle'>Kunde: {escape(client)} | {german_month(month)}</div>
 
 <h2>Monatliche Stundenübersicht</h2>
 <table>
@@ -159,7 +192,7 @@ def generate_customer_pdf(
 
 {detail_sections}
 
-<div class='footer'>Erstellt am {_today()}</div>
+{signatures}
 </body></html>"""
 
     return _render_pdf(html)
@@ -168,16 +201,20 @@ def generate_customer_pdf(
 def generate_finance_pdf(
     year: int,
     projects_data: list[dict],
+    month_str: str | None = None,
 ) -> bytes:
     """Generate a finance report PDF.
 
     Args:
         year: Report year.
         projects_data: List of project dicts with monthly breakdowns.
+        month_str: Optional month in YYYY-MM format for monthly reports.
 
     Returns:
         PDF file content as bytes.
     """
+    title = f"Finanzübersicht {german_month(month_str)}" if month_str else f"Finanzübersicht {year}"
+
     rows = ""
     grand_hours = 0.0
     grand_bonus = 0.0
@@ -206,7 +243,7 @@ def generate_finance_pdf(
 
     html = f"""<!DOCTYPE html>
 <html><head><style>{PDF_CSS}</style></head><body>
-<h1>Finanzübersicht {year}</h1>
+<h1>{title}</h1>
 <div class='subtitle'>Pre-Sales Bonus Report</div>
 
 <table>
@@ -220,7 +257,6 @@ def generate_finance_pdf(
 {rows}
 </table>
 
-<div class='footer'>Erstellt am {_today()}</div>
 </body></html>"""
 
     return _render_pdf(html)
@@ -239,18 +275,19 @@ def generate_finance_csv(
     """
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_ALL)
-    writer.writerow(["Projekt", "Kunde", "Stundensatz",
-                     "Bonussatz", "Stunden", "Bonus"])
+    writer.writerow(["Projekt", "Kunde", "Stundensatz", "Bonussatz", "Stunden", "Bonus"])
     for p in projects_data:
         rate = p.get("hourly_rate") or 0
-        writer.writerow([
-            _defuse_formula(p["project_name"]),
-            _defuse_formula(p["client"]),
-            rate,
-            p["bonus_rate"],
-            p["total_hours"],
-            p["total_bonus"],
-        ])
+        writer.writerow(
+            [
+                _defuse_formula(p["project_name"]),
+                _defuse_formula(p["client"]),
+                rate,
+                p["bonus_rate"],
+                p["total_hours"],
+                p["total_bonus"],
+            ]
+        )
     return output.getvalue()
 
 
@@ -264,13 +301,6 @@ def _defuse_formula(value: str) -> str:
 def safe_filename(name: str) -> str:
     """Remove characters unsafe for HTTP headers and filenames."""
     return re.sub(r"[^\w\-.]", "_", name)
-
-
-def _today() -> str:
-    """Return today's date formatted as DD.MM.YYYY."""
-    from datetime import datetime
-
-    return datetime.now().strftime("%d.%m.%Y")
 
 
 def _render_pdf(html: str) -> bytes:

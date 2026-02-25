@@ -98,6 +98,26 @@ class TestProjectsCrud:
         resp = await client.get(f"/api/projects/{project['id']}")
         assert resp.status_code == 404
 
+    async def test_create_project_with_new_fields(self, client):
+        resp = await client.post(
+            "/api/projects",
+            json={
+                "name": "OnSite Project",
+                "client": "Client B",
+                "project_id": "OSP-001",
+                "hourly_rate": 120.0,
+                "onsite_hourly_rate": 150.0,
+                "bonus_rate": 0.02,
+                "project_manager": "Max Mustermann",
+                "customer_contact": "Erika Musterfrau",
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["onsite_hourly_rate"] == 150.0
+        assert data["project_manager"] == "Max Mustermann"
+        assert data["customer_contact"] == "Erika Musterfrau"
+
 
 class TestImportEndpoints:
     """Test CSV import endpoints."""
@@ -163,3 +183,34 @@ class TestImportEndpoints:
         assert data["total_hours"] == 6.0
         # bonus = 6.0 * 150.0 * 0.02 = 18.0
         assert data["bonus_amount"] == 18.0
+
+    async def test_onsite_time_entry_bonus(self, client):
+        """Verify onsite hours use onsite_hourly_rate for bonus."""
+        # Create project with different remote/onsite rates
+        resp = await client.post(
+            "/api/projects",
+            json={
+                "name": "Thees - Azure Migration",
+                "client": "Thees",
+                "project_id": "430980254956",
+                "hourly_rate": 120.0,
+                "onsite_hourly_rate": 150.0,
+                "bonus_rate": 0.02,
+            },
+        )
+        assert resp.status_code == 201
+        pid = resp.json()["id"]
+
+        # Import CSV (entries link to existing project)
+        await client.post(
+            "/api/imports/upload",
+            files={"file": ("test.csv", SAMPLE_CSV.encode(), "text/csv")},
+        )
+
+        # Imported entries default to is_onsite=False
+        resp = await client.get(f"/api/projects/{pid}")
+        data = resp.json()
+        assert data["remote_hours"] == 6.0
+        assert data["onsite_hours"] == 0.0
+        # bonus = 6.0 * 120.0 * 0.02 = 14.4 (remote rate)
+        assert data["bonus_amount"] == 14.4

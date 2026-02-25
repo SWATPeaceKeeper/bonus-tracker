@@ -60,21 +60,18 @@ export default function BonusOverview() {
       }
     }
 
-    let hours = 0;
-    let bonus = 0;
     const rows: MonthRow[] = MONTHS.map((m) => {
       const fm = monthMap.get(m);
-      const mHours = fm?.total_hours ?? 0;
-      const mBonus = fm?.total_bonus ?? 0;
-      hours += mHours;
-      bonus += mBonus;
       return {
         month: m,
-        hours: mHours,
-        bonus: mBonus,
+        hours: fm?.total_hours ?? 0,
+        bonus: fm?.total_bonus ?? 0,
         projects: fm?.projects ?? [],
       };
     });
+
+    const hours = rows.reduce((sum, r) => sum + r.hours, 0);
+    const bonus = rows.reduce((sum, r) => sum + r.bonus, 0);
 
     return { monthRows: rows, totalHours: hours, totalBonus: bonus };
   }, [data]);

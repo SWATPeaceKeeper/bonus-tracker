@@ -6,23 +6,75 @@ from app.services.bonus_calculator import calculate_bonus
 class TestCalculateBonus:
     """Tests for the calculate_bonus function."""
 
-    def test_standard_calculation(self):
-        # 10 hours * 150 EUR/h * 0.02 = 30.00
-        assert calculate_bonus(10.0, 150.0, 0.02) == 30.0
+    def test_remote_only(self):
+        result = calculate_bonus(
+            remote_hours=10.0,
+            onsite_hours=0.0,
+            hourly_rate=150.0,
+            onsite_hourly_rate=None,
+            bonus_rate=0.02,
+        )
+        assert result == 30.0
+
+    def test_onsite_with_own_rate(self):
+        # 5 remote * 120 * 0.02 = 12.0
+        # 3 onsite * 150 * 0.02 = 9.0
+        result = calculate_bonus(
+            remote_hours=5.0,
+            onsite_hours=3.0,
+            hourly_rate=120.0,
+            onsite_hourly_rate=150.0,
+            bonus_rate=0.02,
+        )
+        assert result == 21.0
+
+    def test_onsite_falls_back_to_hourly_rate(self):
+        # (5 + 3) * 120 * 0.02 = 19.2
+        result = calculate_bonus(
+            remote_hours=5.0,
+            onsite_hours=3.0,
+            hourly_rate=120.0,
+            onsite_hourly_rate=None,
+            bonus_rate=0.02,
+        )
+        assert result == 19.2
 
     def test_zero_hours(self):
-        assert calculate_bonus(0.0, 150.0, 0.02) == 0.0
+        result = calculate_bonus(
+            remote_hours=0.0,
+            onsite_hours=0.0,
+            hourly_rate=150.0,
+            onsite_hourly_rate=None,
+            bonus_rate=0.02,
+        )
+        assert result == 0.0
 
     def test_none_hourly_rate(self):
-        assert calculate_bonus(10.0, None, 0.02) == 0.0
+        result = calculate_bonus(
+            remote_hours=10.0,
+            onsite_hours=5.0,
+            hourly_rate=None,
+            onsite_hourly_rate=None,
+            bonus_rate=0.02,
+        )
+        assert result == 0.0
 
     def test_zero_bonus_rate(self):
-        assert calculate_bonus(10.0, 150.0, 0.0) == 0.0
+        result = calculate_bonus(
+            remote_hours=10.0,
+            onsite_hours=5.0,
+            hourly_rate=150.0,
+            onsite_hourly_rate=180.0,
+            bonus_rate=0.0,
+        )
+        assert result == 0.0
 
     def test_rounding(self):
-        # 3.33 * 99.99 * 0.02 = 6.659334 -> 6.66
-        assert calculate_bonus(3.33, 99.99, 0.02) == 6.66
-
-    def test_large_values(self):
-        result = calculate_bonus(1000.0, 200.0, 0.05)
-        assert result == 10000.0
+        result = calculate_bonus(
+            remote_hours=3.33,
+            onsite_hours=0.0,
+            hourly_rate=99.99,
+            onsite_hourly_rate=None,
+            bonus_rate=0.02,
+        )
+        assert result == 6.66

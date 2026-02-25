@@ -15,6 +15,11 @@ export interface Project {
   updated_at: string;
   total_hours: number;
   bonus_amount: number;
+  remote_hours: number;
+  onsite_hours: number;
+  onsite_hourly_rate: number | null;
+  project_manager: string | null;
+  customer_contact: string | null;
 }
 
 export interface ProjectCreate {
@@ -27,6 +32,9 @@ export interface ProjectCreate {
   bonus_rate?: number;
   status?: string;
   start_date?: string | null;
+  onsite_hourly_rate?: number | null;
+  project_manager?: string | null;
+  customer_contact?: string | null;
 }
 
 export interface ProjectUpdate {
@@ -38,6 +46,9 @@ export interface ProjectUpdate {
   bonus_rate?: number | null;
   status?: string;
   start_date?: string | null;
+  onsite_hourly_rate?: number | null;
+  project_manager?: string | null;
+  customer_contact?: string | null;
 }
 
 export interface TimeEntry {
@@ -141,6 +152,31 @@ export interface CustomerReportNote {
   project_id: number;
   month: string;
   note: string;
+}
+
+// GET /api/reports/revenue
+export interface RevenueProject {
+  id: number;
+  name: string;
+  client: string;
+  deal_value: number | null;
+  budget_hours: number | null;
+  total_hours: number;
+  remote_hours: number;
+  onsite_hours: number;
+  hourly_rate: number | null;
+  onsite_hourly_rate: number | null;
+  revenue: number;
+  budget_utilization: number | null;
+  status: string;
+}
+
+export interface RevenueData {
+  total_deal_value: number;
+  total_revenue: number;
+  avg_budget_utilization: number;
+  active_projects: number;
+  projects: RevenueProject[];
 }
 
 export interface ApiError {

@@ -48,8 +48,11 @@ async def upload_csv(
             continue
 
         is_dup = await _is_duplicate(
-            db, db_project_id, entry.employee,
-            entry.date, entry.duration_decimal,
+            db,
+            db_project_id,
+            entry.employee,
+            entry.date,
+            entry.duration_decimal,
         )
         if is_dup:
             continue
@@ -82,9 +85,7 @@ async def upload_csv(
 @router.get("", response_model=list[ImportBatchRead])
 async def list_imports(db: AsyncSession = Depends(get_db)):
     """List all import batches, newest first."""
-    result = await db.execute(
-        select(ImportBatch).order_by(ImportBatch.imported_at.desc())
-    )
+    result = await db.execute(select(ImportBatch).order_by(ImportBatch.imported_at.desc()))
     return result.scalars().all()
 
 
@@ -92,9 +93,7 @@ async def _ensure_projects(projects, db: AsyncSession) -> int:
     """Create projects that don't exist yet. Return count of newly created."""
     created = 0
     for p in projects:
-        existing = await db.execute(
-            select(Project).where(Project.project_id == p.project_id)
-        )
+        existing = await db.execute(select(Project).where(Project.project_id == p.project_id))
         if existing.scalar_one_or_none():
             continue
         project = Project(
@@ -124,13 +123,15 @@ async def _is_duplicate(
 ) -> bool:
     """Check if a matching time entry already exists."""
     result = await db.execute(
-        select(TimeEntry.id).where(
+        select(TimeEntry.id)
+        .where(
             and_(
                 TimeEntry.project_id == project_id,
                 TimeEntry.employee == employee,
                 TimeEntry.date == entry_date.date(),
                 TimeEntry.duration_decimal == duration,
             )
-        ).limit(1)
+        )
+        .limit(1)
     )
     return result.scalar_one_or_none() is not None

@@ -27,7 +27,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpangocairo-1.0-0 \
     libcairo2 \
     libgdk-pixbuf-2.0-0 \
-    libffi8
+    libffi8 \
+    locales \
+    && sed -i '/de_DE.UTF-8/s/^# //' /etc/locale.gen \
+    && locale-gen
+
+ENV LANG=de_DE.UTF-8
+ENV LC_ALL=de_DE.UTF-8
 
 RUN groupadd -r app && useradd -r -g app -d /app app
 
