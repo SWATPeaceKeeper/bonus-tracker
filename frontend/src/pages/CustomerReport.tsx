@@ -91,9 +91,8 @@ export default function CustomerReport() {
   }
 
   function handleExportPdf() {
-    const year = month.split("-")[0] ?? String(CURRENT_YEAR);
     const url = getDownloadUrl(`/exports/customer-pdf/${id}`, {
-      year,
+      month,
     });
     window.open(url, "_blank");
   }
