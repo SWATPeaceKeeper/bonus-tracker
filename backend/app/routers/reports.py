@@ -400,6 +400,74 @@ async def upsert_customer_note(
     return note
 
 
+@router.get("/employees")
+async def get_employee_report(
+    year: int = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return employee utilization data."""
+    if year is None:
+        year = datetime.now(UTC).year
+    year_prefix = str(year)
+
+    # Get all employees with hours in this year
+    result = await db.execute(
+        select(
+            TimeEntry.employee,
+            TimeEntry.project_id,
+            func.sum(TimeEntry.duration_decimal),
+        )
+        .where(TimeEntry.month.startswith(year_prefix))
+        .group_by(TimeEntry.employee, TimeEntry.project_id)
+        .order_by(TimeEntry.employee)
+    )
+    rows = result.all()
+
+    # Get project names
+    project_ids = list({r[1] for r in rows})
+    if project_ids:
+        proj_result = await db.execute(
+            select(Project.id, Project.name).where(
+                Project.id.in_(project_ids)
+            )
+        )
+        project_names = {
+            pid: name for pid, name in proj_result.all()
+        }
+    else:
+        project_names = {}
+
+    # Build employee data
+    employee_map: dict[str, dict] = {}
+    for employee, project_id, hours in rows:
+        if employee not in employee_map:
+            employee_map[employee] = {
+                "employee": employee,
+                "total_hours": 0.0,
+                "projects": [],
+            }
+        emp = employee_map[employee]
+        emp["total_hours"] += float(hours)
+        emp["projects"].append({
+            "project_id": project_id,
+            "project_name": project_names.get(
+                project_id, "Unbekannt"
+            ),
+            "hours": round(float(hours), 2),
+        })
+
+    employees = sorted(
+        employee_map.values(),
+        key=lambda e: e["total_hours"],
+        reverse=True,
+    )
+    for emp in employees:
+        emp["total_hours"] = round(emp["total_hours"], 2)
+        emp["project_count"] = len(emp["projects"])
+
+    return employees
+
+
 @router.get("/revenue", response_model=RevenueResponse)
 async def get_revenue(
     year: int = Query(default=None),

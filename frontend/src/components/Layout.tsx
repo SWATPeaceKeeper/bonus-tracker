@@ -7,6 +7,7 @@ import {
   FileBarChart,
   Coins,
   TrendingUp,
+  Users,
   Menu,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { to: "/finance", label: "Finanzbericht", icon: <FileBarChart className="h-5 w-5" /> },
   { to: "/bonus", label: "Bonus", icon: <Coins className="h-5 w-5" /> },
   { to: "/revenue", label: "Umsatz", icon: <TrendingUp className="h-5 w-5" /> },
+  { to: "/employees", label: "Mitarbeiter", icon: <Users className="h-5 w-5" /> },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {

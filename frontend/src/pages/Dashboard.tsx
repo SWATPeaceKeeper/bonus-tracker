@@ -204,6 +204,50 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Forecast */}
+      {(() => {
+        const currentMonthNum = new Date().getMonth() + 1;
+        if (currentMonthNum < 2 || data.ytd_hours === 0) return null;
+        const projectedBonus = (data.ytd_bonus / currentMonthNum) * 12;
+        const projectedRevenue = (data.ytd_revenue / currentMonthNum) * 12;
+        const projectedHours = (data.ytd_hours / currentMonthNum) * 12;
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Prognose {new Date().getFullYear()}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Bonus (Prognose)</p>
+                  <p className="text-xl font-bold">{formatCurrency(projectedBonus)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    aktuell {formatCurrency(data.ytd_bonus)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Umsatz (Prognose)</p>
+                  <p className="text-xl font-bold">{formatCurrency(projectedRevenue)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    aktuell {formatCurrency(data.ytd_revenue)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Stunden (Prognose)</p>
+                  <p className="text-xl font-bold">{formatNumber(projectedHours)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    aktuell {formatNumber(data.ytd_hours)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Active projects table */}
       <Card>
         <CardHeader>
