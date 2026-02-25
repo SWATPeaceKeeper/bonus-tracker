@@ -252,20 +252,22 @@ export default function Projects() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-name" className="text-sm font-medium">
                   Projektname
                 </label>
                 <Input
+                  id="proj-name"
                   value={form.name}
                   onChange={(e) => updateField("name", e.target.value)}
                   placeholder="Projektname"
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-project-id" className="text-sm font-medium">
                   Projekt-ID (Clockify)
                 </label>
                 <Input
+                  id="proj-project-id"
                   value={form.project_id}
                   onChange={(e) =>
                     updateField("project_id", e.target.value)
@@ -276,8 +278,9 @@ export default function Projects() {
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Kunde</label>
+              <label htmlFor="proj-client" className="text-sm font-medium">Kunde</label>
               <Input
+                id="proj-client"
                 value={form.client}
                 onChange={(e) => updateField("client", e.target.value)}
                 placeholder="Kundenname"
@@ -286,10 +289,11 @@ export default function Projects() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-deal-value" className="text-sm font-medium">
                   Deal-Wert
                 </label>
                 <Input
+                  id="proj-deal-value"
                   type="number"
                   min={0}
                   step={0.01}
@@ -304,10 +308,11 @@ export default function Projects() {
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-budget-hours" className="text-sm font-medium">
                   Budget (Stunden)
                 </label>
                 <Input
+                  id="proj-budget-hours"
                   type="number"
                   min={0}
                   value={form.budget_hours ?? ""}
@@ -324,10 +329,11 @@ export default function Projects() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-hourly-rate" className="text-sm font-medium">
                   Stundensatz
                 </label>
                 <Input
+                  id="proj-hourly-rate"
                   type="number"
                   min={0}
                   step={0.01}
@@ -342,10 +348,11 @@ export default function Projects() {
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-bonus-rate" className="text-sm font-medium">
                   Bonus-Satz
                 </label>
                 <Input
+                  id="proj-bonus-rate"
                   type="number"
                   min={0}
                   max={1}
@@ -361,12 +368,12 @@ export default function Projects() {
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">Status</label>
+                <label htmlFor="proj-status" className="text-sm font-medium">Status</label>
                 <Select
                   value={form.status ?? "aktiv"}
                   onValueChange={(v) => updateField("status", v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="proj-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -381,10 +388,11 @@ export default function Projects() {
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium">
+              <label htmlFor="proj-onsite-rate" className="text-sm font-medium">
                 OnSite-Stundensatz
               </label>
               <Input
+                id="proj-onsite-rate"
                 type="number"
                 min={0}
                 step={0.01}
@@ -401,8 +409,9 @@ export default function Projects() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <label className="text-sm font-medium">Projektleiter</label>
+                <label htmlFor="proj-manager" className="text-sm font-medium">Projektleiter</label>
                 <Input
+                  id="proj-manager"
                   value={form.project_manager ?? ""}
                   onChange={(e) =>
                     updateField("project_manager", e.target.value || null)
@@ -411,10 +420,11 @@ export default function Projects() {
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">
+                <label htmlFor="proj-contact" className="text-sm font-medium">
                   Kundenansprechpartner
                 </label>
                 <Input
+                  id="proj-contact"
                   value={form.customer_contact ?? ""}
                   onChange={(e) =>
                     updateField("customer_contact", e.target.value || null)
@@ -425,8 +435,9 @@ export default function Projects() {
             </div>
 
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Startdatum</label>
+              <label htmlFor="proj-start-date" className="text-sm font-medium">Startdatum</label>
               <Input
+                id="proj-start-date"
                 type="date"
                 value={form.start_date ?? ""}
                 onChange={(e) =>

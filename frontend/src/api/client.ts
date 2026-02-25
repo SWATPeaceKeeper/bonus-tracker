@@ -1,6 +1,7 @@
 import type { ApiError } from "@/types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export class ApiRequestError extends Error {
   status: number;
@@ -46,7 +47,9 @@ export async function get<T>(
       }
     }
   }
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
   return handleResponse<T>(response);
 }
 
@@ -67,6 +70,7 @@ export async function post<T>(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return handleResponse<T>(response);
 }
@@ -79,6 +83,7 @@ export async function put<T>(
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return handleResponse<T>(response);
 }
@@ -86,6 +91,7 @@ export async function put<T>(
 export async function del<T = void>(path: string): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     method: "DELETE",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   return handleResponse<T>(response);
 }
@@ -100,6 +106,7 @@ export async function uploadFile<T>(
   const response = await fetch(`${BASE_URL}${path}`, {
     method: "POST",
     body: formData,
+    signal: AbortSignal.timeout(300_000),
   });
   return handleResponse<T>(response);
 }

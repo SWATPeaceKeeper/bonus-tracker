@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { ApiRequestError } from "@/api/client";
 
 interface UseApiResult<T> {
   data: T | null;
@@ -38,10 +39,12 @@ export function useApi<T>(
       })
       .catch((err: unknown) => {
         if (!controller.signal.aborted) {
-          const message =
-            err instanceof Error
-              ? err.message
-              : "Unbekannter Fehler";
+          let message = "Unbekannter Fehler";
+          if (err instanceof ApiRequestError) {
+            message = err.detail;
+          } else if (err instanceof Error) {
+            message = err.message;
+          }
           setError(message);
           setLoading(false);
         }

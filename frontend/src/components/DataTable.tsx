@@ -70,6 +70,17 @@ export default function DataTable<T>({
           {columns.map((col) => (
             <TableHead
               key={col.key}
+              role="columnheader"
+              aria-sort={
+                col.sortValue
+                  ? sortKey === col.key
+                    ? sortDir === "asc"
+                      ? "ascending"
+                      : "descending"
+                    : "none"
+                  : undefined
+              }
+              tabIndex={col.sortValue ? 0 : undefined}
               className={cn(
                 col.sortValue && "cursor-pointer select-none",
                 col.className,
@@ -77,6 +88,16 @@ export default function DataTable<T>({
               onClick={
                 col.sortValue
                   ? () => handleSort(col.key)
+                  : undefined
+              }
+              onKeyDown={
+                col.sortValue
+                  ? (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSort(col.key);
+                      }
+                    }
                   : undefined
               }
             >
