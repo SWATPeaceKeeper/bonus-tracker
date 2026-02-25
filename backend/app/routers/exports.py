@@ -108,6 +108,7 @@ async def export_customer_pdf(
 @router.get("/finance")
 async def export_finance(
     year: int = Query(default=None),
+    month: int | None = Query(default=None),
     export_format: str = Query(default="pdf", alias="format"),
     db: AsyncSession = Depends(get_db),
 ):
@@ -115,7 +116,9 @@ async def export_finance(
     if year is None:
         year = datetime.now().year
 
-    projects_data = await _build_finance_data(db, year)
+    projects_data = await _build_finance_data(db, year, month)
+
+    suffix = f"{year}-{month:02d}" if month else str(year)
 
     if export_format == "csv":
         csv_content = generate_finance_csv(projects_data)
@@ -124,33 +127,39 @@ async def export_finance(
             media_type="text/csv",
             headers={
                 "Content-Disposition": (
-                    f'attachment; filename="Finanzbericht_{year}.csv"'
+                    f'attachment; filename="Finanzbericht_{suffix}.csv"'
                 )
             },
         )
 
-    pdf_bytes = generate_finance_pdf(year, projects_data)
+    month_str = f"{year}-{month:02d}" if month else None
+    pdf_bytes = generate_finance_pdf(year, projects_data, month_str=month_str)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
             "Content-Disposition": (
-                f'attachment; filename="Finanzbericht_{year}.pdf"'
+                f'attachment; filename="Finanzbericht_{suffix}.pdf"'
             )
         },
     )
 
 
 async def _build_finance_data(
-    db: AsyncSession, year: int
+    db: AsyncSession, year: int, month: int | None = None
 ) -> list[dict]:
     """Build aggregated project data for finance export."""
-    year_prefix = str(year)
+    if month:
+        month_filter = f"{year}-{month:02d}"
+        month_condition = TimeEntry.month == month_filter
+    else:
+        year_prefix = str(year)
+        month_condition = TimeEntry.month.startswith(year_prefix)
 
-    # Get distinct projects with time entries in this year
+    # Get distinct projects with time entries in this period
     pid_result = await db.execute(
         select(TimeEntry.project_id)
-        .where(TimeEntry.month.startswith(year_prefix))
+        .where(month_condition)
         .distinct()
     )
     project_db_ids = [row[0] for row in pid_result.all()]
@@ -167,7 +176,7 @@ async def _build_finance_data(
             ).where(
                 and_(
                     TimeEntry.project_id == project_db_id,
-                    TimeEntry.month.startswith(year_prefix),
+                    month_condition,
                     TimeEntry.is_onsite == False,  # noqa: E712
                 )
             )
@@ -180,7 +189,7 @@ async def _build_finance_data(
             ).where(
                 and_(
                     TimeEntry.project_id == project_db_id,
-                    TimeEntry.month.startswith(year_prefix),
+                    month_condition,
                     TimeEntry.is_onsite == True,  # noqa: E712
                 )
             )

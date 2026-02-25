@@ -45,6 +45,7 @@ interface ProjectRow {
 
 export default function FinanceReport() {
   const [year, setYear] = useState(String(CURRENT_YEAR));
+  const [month, setMonth] = useState<string>("");
 
   const { data, loading, error, refetch } = useApi<FinanceMonth[]>(
     () => get<FinanceMonth[]>("/reports/finance", { year }),
@@ -99,10 +100,11 @@ export default function FinanceReport() {
   }, [data]);
 
   function handleExport(format: "pdf" | "csv") {
-    const url = getDownloadUrl("/exports/finance", {
-      year,
-      format,
-    });
+    const params: Record<string, string> = { year, format };
+    if (month && month !== "all") {
+      params.month = month;
+    }
+    const url = getDownloadUrl("/exports/finance", params);
     window.open(url, "_blank");
   }
 
@@ -119,6 +121,19 @@ export default function FinanceReport() {
               {YEARS.map((y) => (
                 <SelectItem key={y} value={y}>
                   {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Ganzes Jahr" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Ganzes Jahr</SelectItem>
+              {MONTHS.map((m) => (
+                <SelectItem key={m} value={String(m)}>
+                  {getMonthName(m)}
                 </SelectItem>
               ))}
             </SelectContent>

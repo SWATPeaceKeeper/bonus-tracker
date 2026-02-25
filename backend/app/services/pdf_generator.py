@@ -201,16 +201,24 @@ def generate_customer_pdf(
 def generate_finance_pdf(
     year: int,
     projects_data: list[dict],
+    month_str: str | None = None,
 ) -> bytes:
     """Generate a finance report PDF.
 
     Args:
         year: Report year.
         projects_data: List of project dicts with monthly breakdowns.
+        month_str: Optional month in YYYY-MM format for monthly reports.
 
     Returns:
         PDF file content as bytes.
     """
+    title = (
+        f"Finanzübersicht {german_month(month_str)}"
+        if month_str
+        else f"Finanzübersicht {year}"
+    )
+
     rows = ""
     grand_hours = 0.0
     grand_bonus = 0.0
@@ -239,7 +247,7 @@ def generate_finance_pdf(
 
     html = f"""<!DOCTYPE html>
 <html><head><style>{PDF_CSS}</style></head><body>
-<h1>Finanzübersicht {year}</h1>
+<h1>{title}</h1>
 <div class='subtitle'>Pre-Sales Bonus Report</div>
 
 <table>
