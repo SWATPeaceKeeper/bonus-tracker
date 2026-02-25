@@ -23,18 +23,13 @@ router = APIRouter(prefix="/api/exports", tags=["exports"])
 @router.get("/customer-pdf/{project_id}")
 async def export_customer_pdf(
     project_id: int,
-    year: int = Query(default=None),
+    month: str = Query(...),
     db: AsyncSession = Depends(get_db),
 ):
     """Export a customer report as PDF download."""
-    if year is None:
-        year = datetime.now().year
-
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-
-    year_prefix = str(year)
 
     # Monthly hours
     month_rows = await db.execute(
@@ -45,7 +40,7 @@ async def export_customer_pdf(
         .where(
             and_(
                 TimeEntry.project_id == project_id,
-                TimeEntry.month.startswith(year_prefix),
+                TimeEntry.month == month,
             )
         )
         .group_by(TimeEntry.month)
@@ -62,7 +57,7 @@ async def export_customer_pdf(
         .where(
             and_(
                 TimeEntry.project_id == project_id,
-                TimeEntry.month.startswith(year_prefix),
+                TimeEntry.month == month,
             )
         )
         .order_by(TimeEntry.date)
@@ -83,7 +78,7 @@ async def export_customer_pdf(
         select(CustomerReportNote).where(
             and_(
                 CustomerReportNote.project_id == project_id,
-                CustomerReportNote.month.startswith(year_prefix),
+                CustomerReportNote.month == month,
             )
         )
     )
@@ -94,13 +89,15 @@ async def export_customer_pdf(
     pdf_bytes = generate_customer_pdf(
         project_name=project.name,
         client=project.client,
-        year=year,
+        month=month,
         monthly_data=monthly_data,
         entries_by_month=entries_by_month,
         notes_by_month=notes_by_month,
+        project_manager=project.project_manager,
+        customer_contact=project.customer_contact,
     )
 
-    filename = f"Kundenbericht_{safe_filename(project.client)}_{year}.pdf"
+    filename = f"Kundenbericht_{safe_filename(project.client)}_{month}.pdf"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
