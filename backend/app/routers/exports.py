@@ -14,6 +14,7 @@ from app.services.pdf_generator import (
     generate_customer_pdf,
     generate_finance_csv,
     generate_finance_pdf,
+    safe_filename,
 )
 
 router = APIRouter(prefix="/api/exports", tags=["exports"])
@@ -99,10 +100,7 @@ async def export_customer_pdf(
         notes_by_month=notes_by_month,
     )
 
-    filename = (
-        f"Kundenbericht_{project.client}_{year}.pdf"
-        .replace(" ", "_")
-    )
+    filename = f"Kundenbericht_{safe_filename(project.client)}_{year}.pdf"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
