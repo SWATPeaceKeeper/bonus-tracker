@@ -28,7 +28,7 @@ import {
 import { LoadingState, ErrorState } from "@/components/PageState";
 import { useApi } from "@/hooks/useApi";
 import { get } from "@/api/client";
-import { formatCurrency, formatNumber, getMonthName, STATUS_LABELS } from "@/lib/utils";
+import { formatCurrency, formatNumber, getMonthName, STATUS_LABELS, type ProjectStatus } from "@/lib/utils";
 import type { ProjectReport } from "@/types";
 
 export default function ProjectDetail() {
@@ -81,7 +81,7 @@ export default function ProjectDetail() {
               project.status === "aktiv" ? "default" : "secondary"
             }
           >
-            {STATUS_LABELS[project.status] ?? project.status}
+            {STATUS_LABELS[project.status as ProjectStatus] ?? project.status}
           </Badge>
           <Button variant="outline" asChild>
             <Link to={`/projects/${id}/time-entries`}>
