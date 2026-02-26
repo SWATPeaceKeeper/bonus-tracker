@@ -55,7 +55,7 @@ Layered async FastAPI application:
 - **`config.py`** — Pydantic Settings (DATABASE_URL, CORS_ORIGINS, DEFAULT_BONUS_RATE)
 - **`database.py`** — Async engine, session factory, `get_db` dependency
 - **`routers/`** — `projects`, `imports`, `reports`, `exports`, `time_entries`
-- **`services/`** — `csv_parser` (Clockify format), `bonus_calculator`, `pdf_generator` (WeasyPrint)
+- **`services/`** — `csv_parser` (Clockify format), `bonus_calculator`, `pdf_generator` (WeasyPrint), `data_sources` (TimeEntrySource protocol for CSV/future Clockify API)
 
 Database dependency injection via `get_db` AsyncSession. Projects carry computed `total_hours`, `remote_hours`, `onsite_hours`, and `bonus_amount` (aggregated at query time, not stored).
 
@@ -65,7 +65,7 @@ SPA with lazy-loaded pages:
 
 - **`api/client.ts`** — Fetch wrapper (get/post/put/del/uploadFile) hitting `/api`
 - **`hooks/useApi.ts`** — Generic data-fetching hook with loading/error/refetch
-- **`pages/`** — Dashboard, Projects, ProjectDetail, Import, FinanceReport, BonusOverview, CustomerReport, Revenue
+- **`pages/`** — Dashboard, Projects, ProjectDetail, Import, FinanceReport, BonusOverview, CustomerReport, Revenue, TimeEntries, Employees, ProjectComparison
 - **`components/ui/`** — shadcn/ui primitives (install new ones via `npx shadcn@latest add <component>`)
 - **`types/index.ts`** — TypeScript interfaces mirroring backend schemas
 - **`lib/utils.ts`** — Formatters (currency, numbers, dates)
@@ -93,7 +93,18 @@ total_bonus = remote_bonus + onsite_bonus
 
 ### Nginx (`frontend/nginx.conf`)
 
-Reverse proxy: `/api/` → backend:8000, `/health` → backend, everything else → SPA fallback (index.html).
+Reverse proxy: `/api/` → backend:8000, everything else → SPA fallback (index.html). Listens on port **8080** (non-root user can't bind ports <1024).
+
+### Docker
+
+**Frontend runs as non-root `nginx` user.** This requires:
+- Cache/log/pid dirs must be writable before `USER nginx` switch (see `frontend/Dockerfile`)
+- Nginx listens on **8080**, not 80 — all compose files and Traefik labels reference 8080
+- Healthchecks use `127.0.0.1` not `localhost` (nginx only binds IPv4, `localhost` may resolve to IPv6)
+
+**Backend healthcheck uses `CMD-SHELL`**, not `CMD` array — Podman splits `CMD` array arguments at spaces, breaking `python -c "import ..."` quoting. `CMD-SHELL` runs through `sh -c` which preserves the string.
+
+**CI image references must be lowercase.** `github.repository` contains mixed-case usernames (e.g., `SWATPeaceKeeper`). Docker image refs require lowercase. The workflow uses `${GITHUB_REPOSITORY,,}` (bash lowercase) to set `IMAGE_NAME` before metadata extraction and Trivy scanning.
 
 ## Environment Variables
 
@@ -130,4 +141,4 @@ Backend only. Tests use in-memory SQLite (`sqlite+aiosqlite://`), async pytest w
 
 ## CI/CD
 
-GitHub Actions workflow (`.github/workflows/docker-build.yml`): two parallel jobs (`build-backend`, `build-frontend`) build and push Docker images to GHCR on push to `main` or semantic version tags (`v*.*.*`). Multi-platform: linux/amd64 + linux/arm64. Uses GHA cache for BuildKit layers.
+GitHub Actions workflow (`.github/workflows/docker-build.yml`): `validate` job (lint + test + type check) runs first, then two parallel jobs (`build-backend`, `build-frontend`) build and push Docker images to GHCR on push to `main` or semantic version tags (`v*.*.*`). Multi-platform: linux/amd64 + linux/arm64. Uses GHA cache for BuildKit layers. Trivy scans both images for CRITICAL/HIGH vulnerabilities. All actions pinned to SHA hashes with version comments.
