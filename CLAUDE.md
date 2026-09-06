@@ -99,7 +99,14 @@ Reverse proxy: `/api/` → backend:8000, everything else → SPA fallback (index
 
 **Frontend runs as non-root `nginx` user.** This requires:
 - Cache/log/pid dirs must be writable before `USER nginx` switch (see `frontend/Dockerfile`)
-- Nginx listens on **8080**, not 80 — all compose files and Traefik labels reference 8080
+- Nginx listens on **8080**, not 80 — all compose files reference 8080. The host
+  publishes it on 8888, which is how the app is reached.
+- **No Traefik labels.** They used to route `bonus.local`, which resolved nowhere, on
+  containers that are not on `proxy_network` — Traefik could never have reached them.
+  What the labels did achieve was an endless ACME loop: Let's Encrypt cannot issue for
+  `.local`, and failed orders count against the account rate limit. Removed in
+  homeserver#195 follow-up. Reaching this app through Traefik would need a real
+  hostname under `home.robinwerner.net` and membership in `proxy_network`.
 - Healthchecks use `127.0.0.1` not `localhost` (nginx only binds IPv4, `localhost` may resolve to IPv6)
 
 **Backend healthcheck uses `CMD-SHELL`**, not `CMD` array — Podman splits `CMD` array arguments at spaces, breaking `python -c "import ..."` quoting. `CMD-SHELL` runs through `sh -c` which preserves the string.
