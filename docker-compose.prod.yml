@@ -20,10 +20,6 @@ services:
         max-file: "3"
     networks:
       - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.bonus-api.rule=Host(`bonus.local`) && PathPrefix(`/api`)"
-      - "traefik.http.services.bonus-api.loadbalancer.server.port=8000"
 
   frontend:
     image: ghcr.io/swatpeacekeeper/bonus-tracker-frontend:${BONUS_VERSION:-latest}
@@ -44,10 +40,6 @@ services:
         max-file: "3"
     networks:
       - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.bonus-ui.rule=Host(`bonus.local`)"
-      - "traefik.http.services.bonus-ui.loadbalancer.server.port=8080"
 
 volumes:
   backend-data:

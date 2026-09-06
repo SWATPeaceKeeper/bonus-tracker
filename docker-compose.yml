@@ -15,10 +15,6 @@ services:
       start_period: 10s
     networks:
       - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.bonus-api.rule=Host(`bonus.local`) && PathPrefix(`/api`)"
-      - "traefik.http.services.bonus-api.loadbalancer.server.port=8000"
 
   frontend:
     build: ./frontend
@@ -34,10 +30,6 @@ services:
       start_period: 5s
     networks:
       - internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.bonus-ui.rule=Host(`bonus.local`)"
-      - "traefik.http.services.bonus-ui.loadbalancer.server.port=8080"
 
 volumes:
   backend-data:
